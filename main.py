@@ -38,9 +38,9 @@ delivery_time_low = fuzzy.trapmf(delivery_time,[0,0,15,30])
 delivery_time_medium = fuzzy.trimf(delivery_time, [15,30,45])
 delivery_time_high = fuzzy.trapmf(delivery_time,[30,45,60,60])
 
-response_time_low = fuzzy.trapmf(response_time,[0,0,8,24])
-response_time_medium = fuzzy.trapmf(response_time,[24,36,48,48])
-response_time_high = fuzzy.trapmf(response_time,[24,36,48,48])
+response_time_low  = fuzzy.trapmf(response_time, [0, 0, 12, 36])
+response_time_medium  = fuzzy.trimf(response_time, [24, 36, 48])
+response_time_high = fuzzy.trapmf(response_time, [36, 48, 72, 72])
 
 
 # Membership functions visualization
