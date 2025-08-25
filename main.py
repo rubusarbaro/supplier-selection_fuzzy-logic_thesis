@@ -61,6 +61,7 @@ supplier_low = fuzzy.trimf(var_supplier, [0, 2.5, 5])
 supplier_medium = fuzzy.trimf(var_supplier, [2.5, 5, 7.5])
 supplier_high = fuzzy.trimf(var_supplier, [5, 7.5, 10])
 
+
 # Assign membership degree
 price_level_low = fuzzy.interp_membership(var_price, price_low, price)
 price_level_medium = fuzzy.interp_membership(var_price, price_medium, price)
@@ -77,6 +78,7 @@ delivery_time_level_high = fuzzy.interp_membership(var_delivery_time, delivery_t
 quotation_time_level_low = fuzzy.interp_membership(var_quotation_time, quotation_time_low, quotation_time)
 quotation_time_level_medium = fuzzy.interp_membership(var_quotation_time, quotation_time_medium, quotation_time)
 quotation_time_level_high = fuzzy.interp_membership(var_quotation_time, quotation_time_high, quotation_time)
+
 
 # Rule application
 # Example code uses np.fmax for OR operator. I will use np.fmin for AND.
@@ -112,11 +114,14 @@ supplier_0 = np.zeros_like(var_supplier)
 
 aggregated = np.fmax.reduce([supplier_activation_low, supplier_activation_medium, supplier_activation_high])
 
+
+# Defuzzification
 supplier_score = fuzzy.defuzz(var_supplier, aggregated, "centroid")
 supplier_activation = fuzzy.interp_membership(var_supplier, aggregated, supplier_score)
 
+
 ## Plots
-if True:
+if False:
     # One plot in one
     fig, (ax0, ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(nrows=6, figsize=(8, 9))
 
@@ -176,3 +181,5 @@ if True:
 
     plt.tight_layout()
     plt.show()
+
+print(f"Supplier score: {supplier_score}")
