@@ -61,44 +61,6 @@ supplier_low = fuzzy.trimf(var_supplier, [0, 2.5, 5])
 supplier_medium = fuzzy.trimf(var_supplier, [2.5, 5, 7.5])
 supplier_high = fuzzy.trimf(var_supplier, [5, 7.5, 10])
 
-
-# Membership functions visualization
-fig, (ax0, ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, figsize=(8, 9))
-
-ax0.plot(var_price, price_low, "b", linewidth=1.5, label="Low")
-ax0.plot(var_price, price_medium, "g", linewidth=1.5, label="Regular")
-ax0.plot(var_price, price_high, "r", linewidth=1.5, label="High")
-ax0.legend()
-
-ax1.plot(var_punctuality, punctuality_low, "b", linewidth=1.5, label="Bad")
-ax1.plot(var_punctuality, punctuality_medium, "g", linewidth=1.5, label="Regular")
-ax1.plot(var_punctuality, punctuality_high, "r", linewidth=1.5, label="Good")
-ax1.legend()
-
-ax2.plot(var_delivery_time, delivery_time_low, "b", linewidth=1.5, label="Good")
-ax2.plot(var_delivery_time, delivery_time_medium, "g", linewidth=1.5, label="Regular")
-ax2.plot(var_delivery_time, delivery_time_high, "r", linewidth=1.5, label="Bad")
-ax2.legend()
-
-ax3.plot(var_quotation_time, quotation_time_low, "b", linewidth=1.5, label="Good")
-ax3.plot(var_quotation_time, quotation_time_medium, "g", linewidth=1.5, label="Regular")
-ax3.plot(var_quotation_time, quotation_time_high, "r", linewidth=1.5, label="Bad")
-ax3.legend()
-
-ax4.plot(var_supplier, supplier_low, "b", linewidth=1.5, label="Bad")
-ax4.plot(var_supplier, supplier_medium, "b", linewidth=1.5, label="Regular")
-ax4.plot(var_supplier, supplier_high, "b", linewidth=1.5, label="Good")
-ax4.legend()
-
-for ax in [ax0, ax1, ax2, ax3, ax4]:
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()
-
-# plt.tight_layout()
-# plt.show()
-
 # Assign membership degree
 price_level_low = fuzzy.interp_membership(var_price, price_low, price)
 price_level_medium = fuzzy.interp_membership(var_price, price_medium, price)
@@ -148,5 +110,69 @@ supplier_activation_high = np.fmin.reduce([rule_1, rule_2, rule_3, rule_4, rule_
 
 supplier_0 = np.zeros_like(var_supplier)
 
-fig, ax5 = plt.subplots(figsize=(8, 3))
-ax5.fill_between(var_supplier, supplier_0, supplier_activation_low, facecolor="b", alpha=0.7)
+aggregated = np.fmax.reduce([supplier_activation_low, supplier_activation_medium, supplier_activation_high])
+
+supplier_score = fuzzy.defuzz(var_supplier, aggregated, "centroid")
+supplier_activation = fuzzy.interp_membership(var_supplier, aggregated, supplier_score)
+
+## Plots
+if True:
+    # One plot in one
+    fig, (ax0, ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(nrows=6, figsize=(8, 9))
+
+    # Membership functions visualization
+    ax0.plot(var_price, price_low, "b", linewidth=1.5, label="Low")
+    ax0.plot(var_price, price_medium, "g", linewidth=1.5, label="Regular")
+    ax0.plot(var_price, price_high, "r", linewidth=1.5, label="High")
+    ax0.set_title("Price")
+    ax0.legend()
+
+    ax1.plot(var_punctuality, punctuality_low, "b", linewidth=1.5, label="Bad")
+    ax1.plot(var_punctuality, punctuality_medium, "g", linewidth=1.5, label="Regular")
+    ax1.plot(var_punctuality, punctuality_high, "r", linewidth=1.5, label="Good")
+    ax1.set_title("Punctuality")
+    ax1.legend()
+
+    ax2.plot(var_delivery_time, delivery_time_low, "b", linewidth=1.5, label="Good")
+    ax2.plot(var_delivery_time, delivery_time_medium, "g", linewidth=1.5, label="Regular")
+    ax2.plot(var_delivery_time, delivery_time_high, "r", linewidth=1.5, label="Bad")
+    ax2.set_title("Delivery time")
+    ax2.legend()
+
+    ax3.plot(var_quotation_time, quotation_time_low, "b", linewidth=1.5, label="Good")
+    ax3.plot(var_quotation_time, quotation_time_medium, "g", linewidth=1.5, label="Regular")
+    ax3.plot(var_quotation_time, quotation_time_high, "r", linewidth=1.5, label="Bad")
+    ax3.set_title("Quotation time")
+    ax3.legend()
+
+    ax4.plot(var_supplier, supplier_low, "b", linewidth=1.5, label="Bad")
+    ax4.plot(var_supplier, supplier_medium, "b", linewidth=1.5, label="Regular")
+    ax4.plot(var_supplier, supplier_high, "b", linewidth=1.5, label="Good")
+    ax4.set_title("Supplier")
+    ax4.legend()
+
+    # Membership and result
+    ax5.fill_between(var_supplier, supplier_0, supplier_activation_low, facecolor="b", alpha=0.7)
+    ax5.plot(var_supplier, supplier_low, "b", linewidth=0.5, linestyle="--")
+    ax5.fill_between(var_supplier, supplier_0, supplier_activation_medium, facecolor="g", alpha=0.7)
+    ax5.plot(var_supplier, supplier_medium, "g", linewidth=0.5, linestyle="--")
+    ax5.fill_between(var_supplier, supplier_0, supplier_activation_high, facecolor="r", alpha=0.7)
+    ax5.plot(var_supplier, supplier_high, "r", linewidth=0.5, linestyle="--")
+    ax5.set_title("Output membership")
+
+    ax6.plot(var_supplier, supplier_low, "b", linewidth=0.5, linestyle="--")
+    ax6.plot(var_supplier, supplier_medium, "g", linewidth=0.5, linestyle="--")
+    ax6.plot(var_supplier, supplier_high, "r", linewidth=0.5, linestyle="--")
+    ax6.fill_between(var_supplier, supplier_0, aggregated, facecolor="Orange", alapha=0.7)
+    ax6.plot([supplier_score, supplier_score], [0, supplier_activation], "k", linewidth=1.5, alpha=0.9)
+    ax6.set_title("Aggregated membership and supplier score (line)")
+
+    # Plot display
+    for ax in [ax0, ax1, ax2, ax3, ax4, ax5, ax6]:
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.get_xaxis().tick_bottom()
+        ax.get_yaxis().tick_left()
+
+    plt.tight_layout()
+    plt.show()
