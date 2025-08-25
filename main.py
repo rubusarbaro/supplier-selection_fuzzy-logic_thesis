@@ -12,31 +12,31 @@ import skfuzzy as fuzzy
 
 
 # Inputs
-price = 0
-punctuality = 0
-delivery_time = 0
-quotation_time = 0
+price = 10.54
+punctuality = 0.6
+delivery_time = 7
+quotation_time = 8
 
 
 # Parameters
-price_µ = 0
-price_σ = 0
-max_price = 0
-punctuality_µ = 0
-punctuality_σ = 0
-delivery_time_µ = 0
-delivery_time_σ = 0
-max_delivery_time = 60
-quotation_time_µ = 0
-quotation_time_σ = 0
-max_quotation_time = 30
+price_µ = 400
+price_σ = 200
+max_price = 1200
+#punctuality_µ = 0
+#punctuality_σ = 0
+#delivery_time_µ = 0
+#delivery_time_σ = 0
+#max_delivery_time = 60
+#quotation_time_µ = 0
+#quotation_time_σ = 0
+#max_quotation_time = 30
 
 
 # Variables
 var_price = np.arange(0, max_price + 1, 0.01)
 var_punctuality = np.arange(0, 2, 0.1)
-var_delivery_time = np.arange(0, max_delivery_time + 1, 1)
-var_quotation_time = np.arange(0, max_quotation_time + 1, 1)
+var_delivery_time = np.arange(0, 61, 1)
+var_quotation_time = np.arange(0, 73, 1)
 var_supplier = np.arange(0, 11, 0.01)
 
 
@@ -104,11 +104,23 @@ rule_10 = np.fmin.reduce([price_level_high, punctuality_level_low, delivery_time
 
 rule_11 = 1 - np.fmax.reduce([rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_7, rule_8, rule_9, rule_10])
 
-supplier_activation_low = np.fmin.reduce([rule_6, rule_7, rule_8, rule_9, rule_10, supplier_low])
+supplier_activation_low = np.fmin.reduce([
+    np.fmin(rule_6, supplier_low),
+    np.fmin(rule_7, supplier_low),
+    np.fmin(rule_8, supplier_low),
+    np.fmin(rule_9, supplier_low),
+    np.fmin(rule_10, supplier_low)
+    ])
 
-supplier_activation_medium = np.fmin.reduce([rule_11, supplier_medium])
+supplier_activation_medium = np.fmin(rule_11, supplier_medium)
 
-supplier_activation_high = np.fmin.reduce([rule_1, rule_2, rule_3, rule_4, rule_5, supplier_high])
+supplier_activation_high = np.fmin.reduce([
+    np.fmin(rule_1, supplier_low),
+    np.fmin(rule_2, supplier_low),
+    np.fmin(rule_3, supplier_low),
+    np.fmin(rule_4, supplier_low),
+    np.fmin(rule_5, supplier_low)
+    ])
 
 supplier_0 = np.zeros_like(var_supplier)
 
@@ -121,9 +133,9 @@ supplier_activation = fuzzy.interp_membership(var_supplier, aggregated, supplier
 
 
 ## Plots
-if False:
+if True:
     # One plot in one
-    fig, (ax0, ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(nrows=6, figsize=(8, 9))
+    fig, (ax0, ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(nrows=7, figsize=(8, 9))
 
     # Membership functions visualization
     ax0.plot(var_price, price_low, "b", linewidth=1.5, label="Low")
@@ -151,8 +163,8 @@ if False:
     ax3.legend()
 
     ax4.plot(var_supplier, supplier_low, "b", linewidth=1.5, label="Bad")
-    ax4.plot(var_supplier, supplier_medium, "b", linewidth=1.5, label="Regular")
-    ax4.plot(var_supplier, supplier_high, "b", linewidth=1.5, label="Good")
+    ax4.plot(var_supplier, supplier_medium, "g", linewidth=1.5, label="Regular")
+    ax4.plot(var_supplier, supplier_high, "r", linewidth=1.5, label="Good")
     ax4.set_title("Supplier")
     ax4.legend()
 
@@ -168,7 +180,7 @@ if False:
     ax6.plot(var_supplier, supplier_low, "b", linewidth=0.5, linestyle="--")
     ax6.plot(var_supplier, supplier_medium, "g", linewidth=0.5, linestyle="--")
     ax6.plot(var_supplier, supplier_high, "r", linewidth=0.5, linestyle="--")
-    ax6.fill_between(var_supplier, supplier_0, aggregated, facecolor="Orange", alapha=0.7)
+    ax6.fill_between(var_supplier, supplier_0, aggregated, facecolor="Orange", alpha=0.7)
     ax6.plot([supplier_score, supplier_score], [0, supplier_activation], "k", linewidth=1.5, alpha=0.9)
     ax6.set_title("Aggregated membership and supplier score (line)")
 
