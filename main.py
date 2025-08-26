@@ -6,9 +6,13 @@
 
 
 # Library import
+from dotenv import load_dotenv
+from os import getenv
 import matplotlib.pyplot as plt
 import numpy as np
 import skfuzzy as fuzzy
+
+load_dotenv()
 
 
 # Inputs
