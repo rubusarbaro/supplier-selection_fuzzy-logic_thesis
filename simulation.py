@@ -1,7 +1,7 @@
 ###############################################################################
 ###                                                                         ###
 ###                         NPI Sourcing simulation                         ###
-###                         Saúl R. Morales © 2025                          ###
+###                    Saúl R. Morales © 2025 MIT License                   ###
 ###                                                                         ###
 ###   This module provide the required clases to simulate the Sourcing      ###
 ###   NPI process. It is intended to simulate the process of sourcing       ###
@@ -42,16 +42,13 @@ else:                               # Else, it imports dotenv to handle .env
 
 
 class Project:
-   def __init__(
-        self, name:str, DF_date: date, MCS_date: date,Pilot_date: date,
-        SOP_date: date
-    ):
+   def __init__(self, name:str, df_date: date, mcs_date: date, pilot_date: date, sop_date: date):
       self.name = name
       self.important_dates = {
-         "Design freeze": DF_date,
-         "MCS": MCS_date,
-         "Pilot": Pilot_date,
-         "SOP": SOP_date
+         "Design freeze": df_date,
+         "MCS": mcs_date,
+         "Pilot": pilot_date,
+         "SOP": sop_date
       }
 
    def __str__(self):
@@ -64,24 +61,27 @@ class Item_Master:
         "Project": [],
         "ECN": [],
         "ECN release": [],
-        "RFQ date": [],
         # Part number data
         "Part number": [],
         "Complexity": [],
         "EAU": [],  # EAU stands for Estimated Annual Use
         # Supplier data
+        "Delivery profile": [],
+        "Quotation profile": [],
+        "Price profile": [],
+        "Punctuality profile": [],
         "Supplier ID": [],
         "Supplier name": [],
-        "Quotation date": [],
         "Price": [],
         "Lead time": [],
-        # Sample delivery data
-        "ETA": [],
-        "Delivery date": [],
-        "ISIR documents": [],
-        # Environment data
+        # Dates
+        "RFQ date": [],
+        "Quotation date": [],
         "REQ date": [],
         "PO date": [],
+        "ETA": [],
+        "Delivery date": [],
+        "ISIR documents": [],        
         "ISIR approval": [],
         "PPAP approval": [],
         "Contract date": [],
@@ -157,32 +157,42 @@ class Quotation:
         "Project": [],
         "ECN": [],
         "ECN release": [],
-        "RFQ date": [],
         # Part number data
         "Part number": [],
         "Complexity": [],
         "EAU": [],  # EAU stands for Estimated Annual Use
         # Supplier data
+        "Delivery profile": [],
+        "Quotation profile": [],
+        "Price profile": [],
+        "Punctuality profile": [],
         "Supplier ID": [],
         "Supplier name": [],
-        "Quotation date": [],
         "Price": [],
         "Lead time": [],
+        # Dates
+        "RFQ date": [],
+        "Quotation date": [],
         # Fuzzy inputs
         "Quotation time": [],
         # Other information
         "FY Spend": [], # EAU * Price
-        "Awarded": [] # bool (False only for quotations, True for awarded business)
-        }
+        "Awarded": [], # bool (False only for quotations, True for awarded business)
+      }
 
         self.df = pd.DataFrame(columns)
 
 class Supplier:
-    def __init__(self, id: str | int, name: str, price_profile: str = "regular", quotation_profile: str = "regular", punctuality_profile: str = "regular", delivery_profile: str = "regular"):
+    def __init__(self, id: str | int, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular"):
         self.id = self.__check_id(id)
         self.name = name
         self.quotations = []
         self.awarded_quotations = []
+
+        self.delivery_profile = delivery_profile
+        self.quotation_profile = quotation_profile
+        self.price_profile = price_profile
+        self.punctuality_profile = punctuality_profile
 
         price_profile_map = { # This is a factor to multiply; average and standard deviation
           "low": (0.85, 0.85),
@@ -191,9 +201,9 @@ class Supplier:
         }
 
         quotation_profile_map = { # This is a factor to multiply; average and standard deviation
-          "low": (28.975, 25.1133753461483),
+          "high": (28.975, 25.1133753461483),
           "regular": (27.7241379310345, 21.5974276436511),
-          "high": (24.9444444444444, 10.258266234788)
+          "low": (24.9444444444444, 10.258266234788)
         }
 
         punctuality_profile_map = { # Probability
@@ -272,7 +282,256 @@ class Supplier:
             else:
               raise Exception("Lead time cannot be less than 1 day.")
 
-            quotation.df.loc[len(quotation.df)] = [ecn.project.name, ecn.ecn_id, ecn.ecn_date, rfq_date, part_number.pn, complexity, part_number.eau, self.id, self.name, quotation_date, price, lt, quotation_time, spend, False]
+            quotation.df.loc[len(quotation.df)] = [
+              ecn.project.name,
+              ecn.ecn_id,
+              ecn.ecn_date,
+              part_number.pn,
+              complexity,
+              part_number.eau,
+              self.delivery_profile,
+              self.quotation_profile,
+              self.price_profile,
+              self.punctuality_profile,
+              self.id,
+              self.name,
+              price,
+              lt,
+              rfq_date,
+              quotation_date,
+              quotation_time,
+              spend,
+              False
+            ]
 
           self.quotations.append(quotation)
           return quotation.df
+        
+class Environment:
+  def __init__(self):
+    self.suppliers = []
+    self.ecns = []
+
+    self.item_master = Item_Master().df
+
+    self.part_kinds = {
+        "A": {
+            "average": float(getenv("AVG_A_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_A_PART_KIND", 1)),
+            "complexity": {"low": 0.6818181818182, "medium": 0.318181818181818, "high": 0},
+            "parts": []
+        },
+        "B": {
+            "average": float(getenv("AVG_B_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_B_PART_KIND", 1)),
+            "complexity": {"low": 1/3, "medium": 2/3, "high": 0},
+            "parts": []
+        },
+        "C": {
+            "average": float(getenv("AVG_C_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_C_PART_KIND", 1)),
+            "complexity": {"low": 1, "medium": 0, "high": 0},
+            "parts": []
+        },
+        "D": {
+            "average": float(getenv("AVG_D_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_D_PART_KIND", 1)),
+            "complexity": {"low": 0.090909090909090909, "medium": 0.727272727272727, "high": 0.181818181818182},
+            "parts": []
+        },
+        "E": {
+            "average": float(getenv("AVG_E_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_E_PART_KIND", 1)),
+            "complexity": {"low": 0, "medium": 0, "high": 1},
+            "parts": []
+        },
+        "F": {
+            "average": float(getenv("AVG_F_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_F_PART_KIND", 1)),
+            "complexity": {"low": 0, "medium": 0, "high": 1},
+            "parts": []
+        },
+        "G": {
+            "average": float(getenv("AVG_G_PART_KIND", 0)),
+            "stdev": float(getenv("STDEV_G_PART_KIND", 1)),
+            "complexity": {"low": 0, "medium": 0, "high": 1},
+            "parts": []
+        }
+    }
+
+    self.environment_times = {
+      "release_ecn": (119.47619047619*0.5, 160.671596446795*0.5625),
+      "release_ecn_min": -110,
+      "release_ecn_max": 436,
+      "send_rfq": (3.0625, 3.98415201798981),
+      "create_req": (8.88571428571429, 8.92406428682835),
+      "send_po": (7.53409090909091, 3.31471419560376),
+      "approve_isir": (26.8, 33.7110446645324),
+      "approve_ppap": (2.63559322033898, 5.29741955281872),
+      "upload_contract": (2.2156862745098, 3.23234718683581)
+    }
+
+    self.µ_eau_qty = 319.395833333333
+    self.σ_eau_qty = 364.965095363013
+    self.min_eau_qty = 23
+
+  def add_supplier(self, supplier: Supplier):
+    self.suppliers.append(supplier)
+
+  def add_suppliers(self, suppliers: list[Supplier]):
+    for supplier in suppliers:
+      self.add_supplier(supplier)
+
+  def gen_ecns(self, project: Project, qty: int):
+    for i in range(qty):
+      ecn_part_numbers = []
+      ecn_eau = max(round(np.random.normal(loc=self.μ_eau_qty, scale=self.σ_eau_qty)), self.min_eau_qty)
+
+      while len(ecn_part_numbers) == 0:
+        for key in self.part_kinds.keys():
+          kind_complexity_keys = list(self.part_kinds[key]["complexity"].keys())
+          kind_complexity_probabilities = list(self.part_kinds[key]["complexity"].values())
+
+          for j in range(max(int(np.random.normal(self.part_kinds[key]["average"], self.part_kinds[key]["stdev"])), 0)):
+            category_part_number = len(self.part_kinds[key]["parts"]) + 1
+            complexity = np.random.choice(kind_complexity_keys, p=kind_complexity_probabilities)
+
+            part_number = Part_Number(pn=f"A0{key}{str(category_part_number).zfill(6)}", complexity=complexity, eau=ecn_eau)
+
+            self.part_kinds[key]["parts"].append(part_number)
+            ecn_part_numbers.append(part_number)
+
+      ecn_number = len(self.ecns) + 1
+      µ_ecn_release_time, σ_ecn_release_time = self.environment_times["release_ecn"]
+      ecn_date = project.important_dates["Design freeze"] + timedelta(days=min(max(round(np.random.normal(loc=µ_ecn_release_time, scale=σ_ecn_release_time)), -160), 436))
+      self.ecns.append(ECN(project=project, ecn_id=f"ECN{str(ecn_number).zfill(7)}", ecn_date=ecn_date, pn_list=ecn_part_numbers))
+
+  def quote_ecn(self, ecn: ECN):
+    µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
+
+    for supplier in self.suppliers:
+      rfq_date = ecn.ecn_date + timedelta(days=max(round(np.random.normal(loc=µ_rfq_time, scale=σ_rfq_time)), 0))
+
+      quotation = supplier.quote(ecn, rfq_date)
+      self.item_master = pd.concat([self.item_master, quotation], ignore_index=True)
+
+    return self.item_master[self.item_master["ECN"] == ecn.ecn_id]
+
+  def implement_ecn(self, ecn: ECN, awarded_supplier: Supplier):
+    for supplier in self.suppliers:
+      if supplier != awarded_supplier:
+        for quotation in supplier.quotations:
+          if quotation.ecn == ecn and quotation.awarded == True:
+            raise Exception(f"{ecn.ecn_id} has already been implemented with {supplier.name}.")
+
+    quotation_not_found = True
+    working_quotation = None
+    for quotation in awarded_supplier.quotations:
+      if quotation.ecn == ecn:
+        if quotation.awarded == True:
+          raise Exception(f"{ecn.ecn_id} has already been implemented with {awarded_supplier.name}.")
+        else:
+          quotation.awarded = True
+          working_quotation = quotation
+          quotation_not_found = False
+    if quotation_not_found:
+      raise Exception(f"{ecn.ecn_id} has not been quoted by {awarded_supplier.name}.")
+
+    µ_req_time, σ_req_time = self.environment_times["create_req"]
+    µ_po_time, σ_po_time = self.environment_times["send_po"]
+    µ_delivery_time, σ_delivery_time = (awarded_supplier.μ_delivery_time, awarded_supplier.σ_delivery_time)
+    µ_documents_time, σ_documents_time = (awarded_supplier.μ_isir_documents_upload, awarded_supplier.σ_isir_documents_upload)
+    µ_isir_time, σ_isir_time = self.environment_times["approve_isir"]
+    µ_ppap_time, σ_ppap_time = self.environment_times["approve_ppap"]
+    µ_contract_time, σ_contract_time = self.environment_times["upload_contract"]
+
+    req_time = max(round(np.random.normal(loc=µ_req_time, scale=σ_req_time)), 0)
+    po_time = max(round(np.random.normal(loc=µ_po_time, scale=σ_po_time)), 0)
+    eta_time = max(round(np.random.normal(loc=µ_delivery_time, scale=σ_delivery_time)), awarded_supplier.minimum_delivery_time)
+
+    if random() < awarded_supplier.punctual_p:
+      µ_eta_difference, σ_eta_difference = awarded_supplier.ETA_difference["punctual"]
+      delivery_time = -max(round(np.random.normal(loc=µ_eta_difference, scale=σ_eta_difference)), 0)
+      otd = True
+    else:
+      µ_eta_difference, σ_eta_difference = awarded_supplier.ETA_difference["unpunctual"]
+      delivery_time = max(round(np.random.normal(loc=µ_eta_difference, scale=σ_eta_difference)), 1)
+      otd = False
+
+    documents_time = max(round(np.random.normal(loc=µ_documents_time, scale=σ_documents_time)), 0)
+    isir_time = max(round(np.random.normal(loc=µ_isir_time, scale=σ_isir_time)), 0)
+    ppap_time = max(round(np.random.normal(loc=µ_ppap_time, scale=σ_ppap_time)), 0)
+    contract_time = max(round(np.random.normal(loc=µ_contract_time, scale=σ_contract_time)), 0)
+
+    req_date = working_quotation.date + timedelta(days=req_time)
+    po_date = req_date + timedelta(days=po_time)
+    eta_date = po_date + timedelta(days=eta_time)
+    delivery_date = eta_date + timedelta(days=delivery_time)
+    documents_date = delivery_date + timedelta(days=documents_time)
+    isir_date = documents_date + timedelta(days=isir_time)
+    ppap_date = isir_date + timedelta(days=ppap_time)
+    contract_date = ppap_date + timedelta(days=contract_time)
+
+    if delivery_date <= ecn.project.important_dates["MCS"]:
+      mcs_ready = True
+    else:
+      mcs_ready = False
+
+    if ppap_date <= ecn.project.important_dates["Pilot"]:
+      pilot_ready = True
+    else:
+      pilot_ready = False
+
+    if contract_date <= ecn.project.important_dates["SOP"] - timedelta(weeks=6):
+      sop_ready = True
+    else:
+      sop_ready = False
+
+    self.item_master.loc[
+      (self.item_master["ECN"] == ecn.ecn_id) & (self.item_master["Supplier ID"] == awarded_supplier.id),
+      [
+        "REQ date",
+        "PO date",
+        "ETA",
+        "Delivery date",
+        "ISIR documents",
+        "ISIR approval",
+        "PPAP approval",
+        "Contract date",
+        "OTD",
+        "Delivery time",
+        "Awarded",
+        "MCS ready",
+        "Pilot ready",
+        "SOP ready"
+      ]] = [
+        req_date,
+        po_date,
+        eta_date,
+        delivery_date,
+        documents_date,
+        isir_date,
+        ppap_date,
+        contract_date,
+        otd,
+        eta_time + delivery_time,
+        True,
+        mcs_ready,
+        pilot_ready,
+        sop_ready
+      ]
+
+    return self.item_master[(self.item_master["ECN"] == ecn.ecn_id) & (self.item_master["Supplier ID"] == awarded_supplier.id)]
+
+  def quote_all_ecns(self):
+    for ecn in self.ecns:
+      self.quote_ecn(ecn)
+    return self.item_master
+
+  def gen_initial_item_master_df(self):
+    for ecn in self.ecns:
+      random_supplier = choice(self.suppliers)
+
+      self.implement_ecn(ecn, random_supplier)
+    
+    return self.item_master
