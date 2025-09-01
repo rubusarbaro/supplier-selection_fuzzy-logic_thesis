@@ -194,37 +194,46 @@ class Supplier:
         self.price_profile = price_profile
         self.punctuality_profile = punctuality_profile
 
-        price_profile_map = { # This is a factor to multiply; average and standard deviation
-          "low": (0.85, 0.85),
-          "regular": (1, 1),
-          "high": (1.2, 1.1)
-        }
-
-        quotation_profile_map = { # This is a factor to multiply; average and standard deviation
-          "high": (28.975, 25.1133753461483),
-          "regular": (27.7241379310345, 21.5974276436511),
-          "low": (24.9444444444444, 10.258266234788)
-        }
-
-        punctuality_profile_map = { # Probability
-          "low": 0.19047619047619,
-          "regular": 0.473684210526316,
-          "high": 0.638888888888889
-        }
-
-        self.ETA_difference = {
-            "punctual": (0.888888888888889, 1.01273936708367),
-            "unpunctual": (4.24137931034483, 2.69463981708917)
-        }
-
-        delivery_profile_map = { # This is a factor to multiply; average and standard deviation
+        # Factor dictionaries
+        delivery_profile_factor = { # This is a factor to multiply; average and standard deviation
           "low": (0.8, 0.8),
           "regular": (1, 1),
           "high": (1, 1.3)
         }
 
-        µ_price_profile_factor, σ_price_profile_factor = price_profile_map[price_profile]
-        µ_delivey_profile_factor, σ_delivery_profile_factor = delivery_profile_map[delivery_profile]
+        quotation_profile_factor = { # This is a factor to multiply; average and standard deviation
+          "low": (0.8, 0.8),
+          "regular": (1, 1),
+          "high": (1.3, 1.1)
+        }
+
+        price_profile_factor = { # This is a factor to multiply; average and standard deviation
+          "low": (0.85, 0.85),
+          "regular": (1, 1),
+          "high": (1.2, 1.1)
+        }
+
+        # Factor definition (average and stdev)
+        µ_delivery_profile_factor, σ_delivery_profile_factor = delivery_profile_factor[delivery_profile]
+        µ_quotation_profile_factor, σ_quotation_profile_factor = quotation_profile_factor[quotation_profile]
+        µ_price_profile_factor, σ_price_profile_factor = price_profile_factor[price_profile]
+
+        # Averages and standard deviation
+        self.µ_delivery_time = 34.6206896551724 * µ_delivery_profile_factor
+        self.σ_delivery_time = 16.2802512871323 * σ_delivery_profile_factor
+        self.minimum_delivery_time = 12 * µ_delivery_profile_factor
+
+        self.eta_difference = {
+            "punctual": (0.888888888888889, 1.01273936708367),
+            "unpunctual": (4.24137931034483, 2.69463981708917)
+        }
+
+        self.µ_isir_documents_upload = 0.348484848484849
+        self.σ_isir_documents_upload = 0.936317241478537
+
+        self.µ_quotation_time = 27.7241379310345 * µ_quotation_profile_factor
+        self.σ_quotation_time = 21.5974276436511 * σ_quotation_profile_factor
+        self.minimum_quotation_time = 9 * µ_quotation_profile_factor
 
         self.price_complexity_map = {
             "high": (float(getenv("AVG_PRICE_HIGH_COMPLEXITY", 0)) * µ_price_profile_factor, float(getenv("STDEV_PRICE_HIGH_COMPLEXITY", 1)) * σ_price_profile_factor),
@@ -233,15 +242,12 @@ class Supplier:
             "minimum": float(getenv("MINIMUM_PRICE", 0)) * µ_price_profile_factor
         }
 
-        self.µ_quotation_time, self.σ_quotation_time = quotation_profile_map[quotation_profile]
-        self.minimum_quotation_time = 9
-
-        self.µ_delivery_time = 34.6206896551724 * µ_delivey_profile_factor
-        self.σ_delivery_time = 16.2802512871323 * σ_delivery_profile_factor
-        self.minimum_delivery_time = 12 * µ_delivey_profile_factor
-
-        self.µ_isir_documents_upload = 0.348484848484849
-        self.σ_isir_documents_upload = 0.936317241478537
+        # Probabilities
+        punctuality_profile_map = { # Probability
+          "low": 0.19047619047619,
+          "regular": 0.473684210526316,
+          "high": 0.638888888888889
+        }
 
         self.punctual_p = punctuality_profile_map[punctuality_profile]
 
@@ -450,11 +456,11 @@ class Environment:
     eta_time = max(round(np.random.normal(loc=µ_delivery_time, scale=σ_delivery_time)), awarded_supplier.minimum_delivery_time)
 
     if random() < awarded_supplier.punctual_p:
-      µ_eta_difference, σ_eta_difference = awarded_supplier.ETA_difference["punctual"]
+      µ_eta_difference, σ_eta_difference = awarded_supplier.eta_difference["punctual"]
       delivery_time = -max(round(np.random.normal(loc=µ_eta_difference, scale=σ_eta_difference)), 0)
       otd = True
     else:
-      µ_eta_difference, σ_eta_difference = awarded_supplier.ETA_difference["unpunctual"]
+      µ_eta_difference, σ_eta_difference = awarded_supplier.eta_difference["unpunctual"]
       delivery_time = max(round(np.random.normal(loc=µ_eta_difference, scale=σ_eta_difference)), 1)
       otd = False
 
