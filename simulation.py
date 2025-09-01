@@ -316,6 +316,8 @@ class Supplier:
 class Environment:
   def __init__(self):
     self.suppliers = []
+    self.active_suppliers = []
+    self.inactive_suppliers = []
     self.ecns = []
 
     self.item_master = Item_Master().df
@@ -383,10 +385,27 @@ class Environment:
 
   def add_supplier(self, supplier: Supplier):
     self.suppliers.append(supplier)
+    self.active_suppliers.append(supplier)
 
   def add_suppliers(self, suppliers: list[Supplier]):
     for supplier in suppliers:
       self.add_supplier(supplier)
+  
+  def create_supplier(self, name: str, active: bool = True, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular"):
+    for supplier in self.suppliers:
+      if supplier.name == name:
+        raise Exception(f"Supplier {name} already exists. Its ID is {supplier.id}.")
+
+    supplier_id = len(self.suppliers) + 1
+    supplier = Supplier(supplier_id, name, delivery_profile, quotation_profile, price_profile, punctuality_profile)
+    self.add_supplier(supplier)
+
+    if not active:
+      self.deactivate_supplier(supplier)
+  
+  def deactivate_supplier(self, supplier: Supplier):
+    self.inactive_suppliers.append(supplier)
+    self.active_suppliers.remove(supplier)
 
   def gen_ecns(self, project: Project, qty: int):
     for i in range(qty):
@@ -415,7 +434,7 @@ class Environment:
   def quote_ecn(self, ecn: ECN):
     µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
 
-    for supplier in self.suppliers:
+    for supplier in self.active_suppliers:
       rfq_date = ecn.ecn_date + timedelta(days=max(round(np.random.normal(loc=µ_rfq_time, scale=σ_rfq_time)), 0))
 
       quotation = supplier.quote(ecn, rfq_date)
