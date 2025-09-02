@@ -44,6 +44,7 @@ else:                               # Else, it imports dotenv to handle .env
 class Project:
    def __init__(self, name:str, df_date: date, mcs_date: date, pilot_date: date, sop_date: date):
       self.name = name
+      self.ecns = []
       self.important_dates = {
          "Design freeze": df_date,
          "MCS": mcs_date,
@@ -187,7 +188,7 @@ class Supplier:
         self.id = self.__check_id(id)
         self.name = name
         self.quotations = []
-        self.awarded_quotations = []
+        self.awarded_ecns = []
 
         self.delivery_profile = delivery_profile
         self.quotation_profile = quotation_profile
@@ -390,6 +391,13 @@ class Environment:
   def add_suppliers(self, suppliers: list[Supplier]):
     for supplier in suppliers:
       self.add_supplier(supplier)
+
+  def activate_supplier(self, supplier: Supplier):
+      if supplier in self.active_suppliers:
+        print(f"{supplier.name} is already active.")
+      else:
+        self.active_suppliers.append(supplier)
+        self.inactive_suppliers.remove(supplier)
   
   def create_supplier(self, name: str, active: bool = True, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular"):
     for supplier in self.suppliers:
@@ -408,6 +416,8 @@ class Environment:
     self.active_suppliers.remove(supplier)
 
   def gen_ecns(self, project: Project, qty: int):
+    ecns = []
+
     for i in range(qty):
       ecn_part_numbers = []
       ecn_eau = max(round(np.random.normal(loc=self.μ_eau_qty, scale=self.σ_eau_qty)), self.min_eau_qty)
@@ -429,9 +439,27 @@ class Environment:
       ecn_number = len(self.ecns) + 1
       µ_ecn_release_time, σ_ecn_release_time = self.environment_times["release_ecn"]
       ecn_date = project.important_dates["Design freeze"] + timedelta(days=min(max(round(np.random.normal(loc=µ_ecn_release_time, scale=σ_ecn_release_time)), -160), 436))
-      self.ecns.append(ECN(project=project, ecn_id=f"ECN{str(ecn_number).zfill(7)}", ecn_date=ecn_date, pn_list=ecn_part_numbers))
 
-  def quote_ecn(self, ecn: ECN):
+      ecn = ECN(project=project, ecn_id=f"ECN{str(ecn_number).zfill(7)}", ecn_date=ecn_date, pn_list=ecn_part_numbers)
+      self.ecns.append(ecn)
+      project.ecns.append(ecn)
+      ecns.append(ecn)
+
+    return ecns
+
+  def get_supplier(self, search_mode: str, reference: str):
+    for supplier in self.suppliers:
+      match search_mode:
+          case "name":
+            if supplier.name == reference:
+              return supplier
+          case "id":
+            if len(reference) != 8:
+              raise Exception("Supplier ID length is 8 characters.")
+            if supplier.id == reference:
+              return supplier
+
+  def quote_ecn_all_suppliers(self, ecn: ECN):
     µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
 
     for supplier in self.active_suppliers:
@@ -441,6 +469,20 @@ class Environment:
       self.item_master = pd.concat([self.item_master, quotation], ignore_index=True)
 
     return self.item_master[self.item_master["ECN"] == ecn.ecn_id]
+  
+  def quote_ecn_some_suppliers(self, ecn: ECN, quoting_suppliers: list[Supplier]):
+    µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
+
+    for supplier in quoting_suppliers:
+      if supplier in self.active_suppliers:
+          rfq_date = ecn.ecn_date + timedelta(days=max(round(np.random.normal(loc=µ_rfq_time, scale=σ_rfq_time)), 0))
+
+          quotation = supplier.quote(ecn, rfq_date)
+          self.item_master = pd.concat([self.item_master, quotation], ignore_index=True)
+
+          return self.item_master[self.item_master["ECN"] == ecn.ecn_id]
+      else:
+          print(f"{supplier.name} is inactive.")
 
   def implement_ecn(self, ecn: ECN, awarded_supplier: Supplier):
     for supplier in self.suppliers:
@@ -546,11 +588,12 @@ class Environment:
         sop_ready
       ]
 
+    awarded_supplier.awarded_ecns.append(ecn)
     return self.item_master[(self.item_master["ECN"] == ecn.ecn_id) & (self.item_master["Supplier ID"] == awarded_supplier.id)]
 
   def quote_all_ecns(self):
     for ecn in self.ecns:
-      self.quote_ecn(ecn)
+      self.quote_ecn_all_suppliers(ecn)
     return self.item_master
 
   def gen_initial_item_master_df(self):
