@@ -399,12 +399,13 @@ class Environment:
         self.active_suppliers.append(supplier)
         self.inactive_suppliers.remove(supplier)
   
-  def create_supplier(self, name: str, active: bool = True, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular"):
+  def create_supplier(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular", active: bool = True):
     for supplier in self.suppliers:
       if supplier.name == name:
         raise Exception(f"Supplier {name} already exists. Its ID is {supplier.id}.")
 
-    supplier_id = len(self.suppliers) + 1
+    supplier_number = len(self.suppliers) + 1
+    supplier_id = f"1{str(supplier_number).zfill(7)}"
     supplier = Supplier(supplier_id, name, delivery_profile, quotation_profile, price_profile, punctuality_profile)
     self.add_supplier(supplier)
 
