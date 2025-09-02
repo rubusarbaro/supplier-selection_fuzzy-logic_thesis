@@ -485,25 +485,36 @@ class Environment:
       else:
           print(f"{supplier.name} is inactive.")
 
-  def implement_ecn(self, ecn: ECN, awarded_supplier: Supplier):
-    for supplier in self.suppliers:
-      if supplier != awarded_supplier:
-        for quotation in supplier.quotations:
-          if quotation.ecn == ecn and quotation.awarded == True:
-            raise Exception(f"{ecn.ecn_id} has already been implemented with {supplier.name}.")
+  def implement_ecn(self, ecn: ECN, awarded_supplier: Supplier, overwrite: bool = False):
+    if not overwrite:
+      for supplier in self.suppliers:
+        if supplier != awarded_supplier:
+          for quotation in supplier.quotations:
+            if quotation.ecn == ecn and quotation.awarded == True:
+              raise Exception(f"{ecn.ecn_id} has already been implemented with {supplier.name}.")
 
-    quotation_not_found = True
-    working_quotation = None
-    for quotation in awarded_supplier.quotations:
-      if quotation.ecn == ecn:
-        if quotation.awarded == True:
-          raise Exception(f"{ecn.ecn_id} has already been implemented with {awarded_supplier.name}.")
-        else:
-          quotation.awarded = True
-          working_quotation = quotation
-          quotation_not_found = False
-    if quotation_not_found:
-      raise Exception(f"{ecn.ecn_id} has not been quoted by {awarded_supplier.name}.")
+      quotation_not_found = True
+      working_quotation = None
+      for quotation in awarded_supplier.quotations:
+        if quotation.ecn == ecn:
+          if quotation.awarded == True:
+            raise Exception(f"{ecn.ecn_id} has already been implemented with {awarded_supplier.name}.")
+          else:
+            quotation.awarded = True
+            working_quotation = quotation
+            quotation_not_found = False
+      if quotation_not_found:
+        raise Exception(f"{ecn.ecn_id} has not been quoted by {awarded_supplier.name}.")
+    else:
+        quotation_not_found = True
+        working_quotation = None
+        for quotation in awarded_supplier.quotations:
+            if quotation.ecn == ecn:
+              quotation.awarded = True
+              working_quotation = quotation
+              quotation_not_found = False
+        if quotation_not_found:
+            raise Exception(f"{ecn.ecn_id} has not been quoted by {awarded_supplier.name}.")
 
     µ_req_time, σ_req_time = self.environment_times["create_req"]
     µ_po_time, σ_po_time = self.environment_times["send_po"]
