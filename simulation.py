@@ -229,9 +229,10 @@ class ECN:
         Parameters:
           project (Project): Project related to this ECN.
           ecn_id (str): ECN unique identifier.
-          ecn_date (date): Date when ECN was released.
+          ecn_date (date): Date when ECN was released in date format.
           pn_list (list[Part_Number]): List of part numers released in this ECN.
         """
+        ECN.instances += 1
         self.project = project
         self.ecn_id = ecn_id
         self.ecn_date = ecn_date
@@ -243,8 +244,6 @@ class ECN:
             "Pilot ready": False,
             "SOP ready": False
         }
-
-        ECN.instances += 1
 
     def __str__(self):
         """ECN id when the object is printed."""
@@ -286,6 +285,14 @@ class Quotation:
       Quotation as Pandas DataFrame.
     """
     def __init__(self, ecn: ECN, supplier: object, date: date):
+        """
+        Initializes the Quotation object.
+
+        Parameters:
+          ecn (ECN): ECN object related to this quotation.
+          supplier (Supplier): Supplier object who made this quotation.
+          date (date): Quotation date in date format.
+        """
         self.ecn = ecn
         self.supplier = supplier
         self.date = date
@@ -324,7 +331,12 @@ class Quotation:
         self.df = pd.DataFrame(columns)
 
 class Supplier:
+    """
+    Represents a supplier.
+    """
+    instances = 0
     def __init__(self, id: str | int, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular"):
+        Supplier.instances += 1
         self.id = self.__check_id(id)
         self.name = name
         self.quotations = []
