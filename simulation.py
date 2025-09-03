@@ -42,7 +42,38 @@ else:                               # Else, it imports dotenv to handle .env
 
 
 class Project:
-   def __init__(self, name:str, df_date: date, mcs_date: date, pilot_date: date, sop_date: date):
+  """
+  Represents a NPI project.
+
+  Attributes
+  ----------
+  name : str
+    Name of NPI project.
+  ecns : list[ECN]
+    List object containing the ECNs related to the project.
+  important_dates : dict[str, date]
+    Dictionary containing the important dates for the project, such as Design Freeze, MCS, Pilot and SOP.
+  
+  Methods
+  -------
+  """
+  def __init__(
+    self,
+    name: str,
+    df_date: date,
+    mcs_date: date, 
+    pilot_date: date,
+    sop_date: date):
+      """
+      Initialize Project object.
+
+      Parameters:
+      name (str): Name of NPI project.
+      df_date (date): Date of design freeze. Design freeze is the date when non-critical changes to the project cease. ECNs are released near this date.
+      mcs_date (date): Date of MCS. Samples need to arrive before this date, but they do not need to be PPAP approved.
+      pilot_date (date): Date of pilot. Building pilot units. Material need to be PPAP approved and in SAP contract before this date; procurement is made by regular purchasing process.
+      sop_date (date): Date of start of production. Implementation of NPI project.
+      """
       self.name = name
       self.ecns = []
       self.important_dates = {
@@ -52,7 +83,7 @@ class Project:
          "SOP": sop_date
       }
 
-   def __str__(self):
+  def __str__(self):
       return self.name
 
 class Item_Master:
