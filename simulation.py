@@ -84,9 +84,21 @@ class Project:
       }
 
   def __str__(self):
+      """Returns project name when the object is printed."""
       return self.name
 
 class Item_Master:
+   """
+   Standarized column format for the data frame.
+
+   Attributes
+   ----------
+   columns : dict[str, list]
+      Dictionary. The keys are used as column name; values are list containing the data for each column.
+   df : DataFrame
+      Pandas' data frame.
+   """
+
    def __init__(self):
       columns = {
         # ECN identification data
@@ -133,15 +145,54 @@ class Item_Master:
       self.df = pd.DataFrame(columns)
 
 class Part_Number:
+    """
+    Represents a single material or part number.
+    This class is made to represent exclusively copper pipes. However, it could be used for any kind of material.
+
+    Attributes
+    ----------
+    pn : str
+      Unique part number for the material. There must not be two materials with the same part number.
+    complexity : str
+      Complexity of the copper pipe.
+    eau : int
+      Estimated Annual Use, is the quantity of the material that is intended to consume during the fiscal year.
+    """
     def __init__(self, pn: str, complexity: str, eau: int):
+        """
+        Initialize the Part_Number object.
+
+        Parameters:
+        pn (str): Unique part number for the material.
+        complexity (str): Complexity of the material. Valid options are 'low', 'medium', 'high'.
+        eau (int): Estimated Annual Use, is the quantity of the material that is intended to consume during the fiscal year.
+        """
         self.pn = pn
         self.complexity = complexity
         self.eau = eau  # I am using an integer because most of the materials have EA as UOM, with limited exceptions.
 
     def __str__(self):
+        """Returns part number identifies when the object is printed."""
         return self.pn
 
 class ECN:
+    """
+    Represents an ECN (Engineering Change Notification) as a set of part numbers.
+
+    Attributes
+    ----------
+    project : Project
+    ecn_id : str
+    ecn_date : date
+    items : list[Part_Number]
+    quotations : list[Quotation]
+    readines : dict[str, bool]
+
+    Methods
+    -------
+    display_as_df():
+      Returns a DataFrame containing the columns 'Project', 'ECN', 'ECN release', 'Part number', 'Complexity', 'EAU', and its values.
+    """
     def __init__(self, project: Project, ecn_id: str, ecn_date: date, pn_list: list[Part_Number]):
         self.project = project
         self.ecn_id = ecn_id
@@ -165,7 +216,7 @@ class ECN:
           "ECN release": [],
           "Part number": [],
           "Complexity": [],
-          "EUA": []
+          "EAU": []
        }
 
       df = pd.DataFrame(df_layout)
