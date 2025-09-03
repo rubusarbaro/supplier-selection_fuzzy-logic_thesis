@@ -68,11 +68,11 @@ class Project:
       Initialize Project object.
 
       Parameters:
-      name (str): Name of NPI project.
-      df_date (date): Date of design freeze. Design freeze is the date when non-critical changes to the project cease. ECNs are released near this date.
-      mcs_date (date): Date of MCS. Samples need to arrive before this date, but they do not need to be PPAP approved.
-      pilot_date (date): Date of pilot. Building pilot units. Material need to be PPAP approved and in SAP contract before this date; procurement is made by regular purchasing process.
-      sop_date (date): Date of start of production. Implementation of NPI project.
+        name (str): Name of NPI project.
+        df_date (date): Date of design freeze. Design freeze is the date when non-critical changes to the project cease. ECNs are released near this date.
+        mcs_date (date): Date of MCS. Samples need to arrive before this date, but they do not need to be PPAP approved.
+        pilot_date (date): Date of pilot. Building pilot units. Material need to be PPAP approved and in SAP contract before this date; procurement is made by regular purchasing process.
+        sop_date (date): Date of start of production. Implementation of NPI project.
       """
       self.name = name
       self.ecns = []
@@ -93,13 +93,12 @@ class Item_Master:
 
    Attributes
    ----------
-   columns : dict[str, list]
-      Dictionary. The keys are used as column name; values are list containing the data for each column.
    df : DataFrame
       Pandas' data frame.
    """
 
    def __init__(self):
+      """Initialize the Item Master object."""
       columns = {
         # ECN identification data
         "Project": [],
@@ -163,16 +162,16 @@ class Part_Number:
         Initialize the Part_Number object.
 
         Parameters:
-        pn (str): Unique part number for the material.
-        complexity (str): Complexity of the material. Valid options are 'low', 'medium', 'high'.
-        eau (int): Estimated Annual Use, is the quantity of the material that is intended to consume during the fiscal year.
+          pn (str): Unique part number for the material.
+          complexity (str): Complexity of the material. Valid options are 'low', 'medium', 'high'.
+          eau (int): Estimated Annual Use, is the quantity of the material that is intended to consume during the fiscal year.
         """
         self.pn = pn
         self.complexity = complexity
         self.eau = eau  # I am using an integer because most of the materials have EA as UOM, with limited exceptions.
 
     def __str__(self):
-        """Returns part number identifies when the object is printed."""
+        """Returns part number identifier when the object is printed."""
         return self.pn
 
 class ECN:
@@ -181,19 +180,38 @@ class ECN:
 
     Attributes
     ----------
+    instances : int
+      Counter of ECN objects.
     project : Project
+      Project object related to this ECN.
     ecn_id : str
+      ECN unique identifier.
     ecn_date : date
+      Date when ECN was released.
     items : list[Part_Number]
+      List of part numers released in this ECN.
     quotations : list[Quotation]
-    readines : dict[str, bool]
+      List of quotations related to this ECN.
+    readiness : dict[str, bool]
+      Dictionary containing bools (True or False) indicating id the ECN implementation met the dates of the project.
 
     Methods
     -------
     display_as_df():
       Returns a DataFrame containing the columns 'Project', 'ECN', 'ECN release', 'Part number', 'Complexity', 'EAU', and its values.
     """
+    instances = 0
+
     def __init__(self, project: Project, ecn_id: str, ecn_date: date, pn_list: list[Part_Number]):
+        """
+        Initialize the ECN object.
+
+        Parameters:
+          project (Project): Project related to this ECN.
+          ecn_id (str): ECN unique identifier.
+          ecn_date (date): Date when ECN was released.
+          pn_list (list[Part_Number]): List of part numers released in this ECN.
+        """
         self.project = project
         self.ecn_id = ecn_id
         self.ecn_date = ecn_date
@@ -206,10 +224,14 @@ class ECN:
             "SOP ready": False
         }
 
+        ECN.instances += 1
+
     def __str__(self):
+        """ECN id when the object is printed."""
         return self.ecn_id
 
     def display_as_df(self):
+      """Returns ECN as a Pandas DataFrame, containing the information for each part number in a row."""
       df_layout = {
           "Project": [],
           "ECN": [],
@@ -227,6 +249,22 @@ class ECN:
       return df
 
 class Quotation:
+    """
+    Represents a supplier's quotation.
+
+    Attributes
+    ----------
+    ecn : ECN
+      ECN related to this quotation.
+    supplier : Supplier
+      Supplier who made this quotation.
+    date : date
+      Quotation date.
+    awarded : bool
+      Indicates if the quotation (supplier) was awarded with the business.
+    df : DataFrame
+      Quotation as Pandas DataFrame.
+    """
     def __init__(self, ecn: ECN, supplier: object, date: date):
         self.ecn = ecn
         self.supplier = supplier
