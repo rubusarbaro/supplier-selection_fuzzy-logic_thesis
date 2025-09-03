@@ -3,7 +3,7 @@
 ###                         NPI Sourcing simulation                         ###
 ###                    Saúl R. Morales © 2025 MIT License                   ###
 ###                                                                         ###
-###   This module provide the required clases to simulate the Sourcing      ###
+###   This module provides the required clases to simulate the Sourcing     ###
 ###   NPI process. It is intended to simulate the process of sourcing       ###
 ###   copper piping in a new product introduction (NPI) project for HVAC    ###
 ###   industry, from Design Freeze (P2) to Start of Production (P3)         ###
@@ -19,6 +19,26 @@
 ###   variables can be stored as a secret.                                  ###
 ###                                                                         ###
 ###############################################################################
+"""
+This module provides the required clases to simulate the Sourcing NPI process. It is intended to simulate a basic process of sourcing in a new product introduction (NPI) project.
+
+Classes
+-------
+ECN
+  Represents an ECN (Engineering Change Notification) as a set of part numbers.
+Environment
+  Represents the environment were the NPI project takes place and objects interact.
+Item_Master
+  Provides a Pandas' DataFrame with a standardized column set.
+Part_Number
+  Represents a single material or part number.
+Project
+  Represents a NPI (New Product Introduction) project.
+Quotation
+  Represents a supplier's quotation.
+Supplier
+  Represents a supplier.
+"""
 
 ## Dependent modules
 from datetime import date, timedelta    # To work dates.
