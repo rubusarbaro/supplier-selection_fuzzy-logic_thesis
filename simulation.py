@@ -604,6 +604,11 @@ class Environment:
 
     return ecns
 
+  def get_ecn(self, search_reference: str):
+     for ecn in self.ecns:
+        if ecn.ecn_id == search_reference:
+           return ecn
+  
   def get_supplier(self, search_mode: str, reference: str):
     for supplier in self.suppliers:
       match search_mode:
