@@ -621,6 +621,10 @@ class Environment:
             if supplier.id == reference:
               return supplier
 
+  def quote_all_ecn_project_all_suppliers(self, project: Project):
+     for ecn in project.ecns:
+        self.quote_ecn_all_suppliers(ecn)
+
   def quote_ecn_all_suppliers(self, ecn: ECN):
     µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
 
@@ -771,6 +775,14 @@ class Environment:
 
   def gen_initial_item_master_df(self):
     for ecn in self.ecns:
+      random_supplier = choice(self.suppliers)
+
+      self.implement_ecn(ecn, random_supplier)
+    
+    return self.item_master
+  
+  def gen_initial_item_master_df_project(self, project: Project):
+    for ecn in project.ecns:
       random_supplier = choice(self.suppliers)
 
       self.implement_ecn(ecn, random_supplier)
