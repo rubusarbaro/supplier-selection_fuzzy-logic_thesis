@@ -28,6 +28,8 @@ ECN
   Represents an ECN (Engineering Change Notification) as a set of part numbers.
 Environment
   Represents the environment were the NPI project takes place and objects interact.
+Fuzzy_Model
+  Provides a fuzzy logic Mamdni's model to evaluate suppliers.
 Item_Master
   Provides a Pandas' DataFrame with a standardized column set.
 Part_Number
@@ -807,8 +809,9 @@ class Environment:
     return (mean(punctuality_list), stdev(punctuality_list))
   
 class Fuzzy_Model:
-    def __init__(self, df_item_master: pd.DataFrame):
+    def __init__(self, df_item_master: pd.DataFrame, new_suppliers: bool = False):
       self.df = df_item_master
+      self.new_suppliers = new_suppliers
 
       avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()
       std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
