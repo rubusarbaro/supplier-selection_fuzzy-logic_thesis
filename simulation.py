@@ -42,9 +42,15 @@ Supplier
 
 ## Dependent modules
 from datetime import date, timedelta    # To work dates.
-from random import choice, random               # To generate random numbers.
+from math import ceil, floor
+from statistics import mean, stdev
+from random import choice, random       # To generate random numbers.
+import matplotlib.pyplot as plt
+import colors
+import misc
 import numpy as np                      # To generate random numbers.
 import pandas as pd                     # To work with data frames.
+import skfuzzy as fuzzy
 import sys                              # To verify if it is running in Colab.
 
 # Verify if the module is running in a Google Colab module.
@@ -367,12 +373,13 @@ class Supplier:
       "high": (1.2, 1.1)
     }
 
-    def __init__(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular"):
+    def __init__(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular", standard_lt: int = 0):
         Supplier.instances += 1
         self.id = f"1{str(Supplier.instances).zfill(7)}"
         self.name = name
         self.quotations = []
         self.awarded_ecns = []
+        self.standard_lead_time = standard_lt
 
         self.delivery_profile = delivery_profile
         self.quotation_profile = quotation_profile
@@ -441,12 +448,12 @@ class Supplier:
             price = round(max(np.random.normal(µ, σ), min_price), 2)
             spend = part_number.eau * price
 
-            if lead_time == 0:
+            if lead_time == 0 and self.standard_lead_time == 0:
               lt = np.nan
             elif lead_time > 0:
               lt = lead_time
             else:
-              raise Exception("Lead time cannot be less than 1 day.")
+              lt = self.standard_lead_time
 
             quotation.df.loc[len(quotation.df)] = [
               ecn.project.name,
@@ -617,7 +624,7 @@ class Environment:
               return supplier
           case "id":
             if len(reference) != 8:
-              raise Exception("Supplier ID length is 8 characters.")
+              raise Exception("Supplier ID length must be 8 characters.")
             if supplier.id == reference:
               return supplier
 
@@ -788,3 +795,152 @@ class Environment:
       self.implement_ecn(ecn, random_supplier)
     
     return self.item_master
+  
+  def get_µσ_punctuality(self):
+    punctuality_list = []
+
+    for supplier_id in self.item_master[(self.item_master["Awarded"] == True)]["Supplier ID"].unique():
+        punctuality = len(self.item_master[(self.item_master["Supplier ID"] == supplier_id) & (self.item_master["Awarded"] == True) & (self.item_master["OTD"] == True)]) / len(self.item_master[(self.item_master["Supplier ID"] == supplier_id) & (self.item_master["Awarded"] == True)])
+
+        punctuality_list.append(punctuality)
+
+    return (mean(punctuality_list), stdev(punctuality_list))
+  
+class Fuzzy_Model:
+    def __init__(self, df_item_master: pd.DataFrame):
+      self.df = df_item_master
+
+      avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()
+      std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
+
+      avg_price = self.df[["Supplier name", "Price"]].groupby("Supplier name").sum()["Price"].mean()
+      std_price = self.df[["Supplier name", "Price"]].groupby("Supplier name").sum()["Price"].std()
+      
+      max_delivery_time = ceil(avg_delivery_time + 3*std_delivery_time)
+
+      min_price = min(floor(avg_price - 3*std_price), 0)
+      max_price = ceil(avg_price + 3*std_price)
+
+      self.var_delivery_time = np.arange(0, max_delivery_time + 1, 1)
+      self.var_price = np.arange(min_price, max_price + 1, 0.01)
+      self.var_punctuality = np.arange(0, 2, 0.01)
+      self.var_supplier = np.arange(0, 11, 0.01)
+
+      self.delivery_time_low = fuzzy.trapmf(self.var_delivery_time, [0, 0, avg_delivery_time - std_delivery_time, avg_delivery_time])
+      self.delivery_time_medium = fuzzy.trimf(self.var_delivery_time, [avg_delivery_time - std_delivery_time, avg_delivery_time, avg_delivery_time + std_delivery_time])
+      self.delivery_time_high = fuzzy.trapmf(self.var_delivery_time, [avg_delivery_time, avg_delivery_time + std_delivery_time, max_delivery_time, max_delivery_time])
+
+      self.punctuality_low = fuzzy.trapmf(self.var_punctuality, [0, 0, 0.25, 0.5])
+      self.punctuality_medium = fuzzy.trimf(self.var_punctuality, [0.25, 0.5, 0.75])
+      self.punctuality_high = fuzzy.trapmf(self.var_punctuality, [0.5, 0.75, 1, 1])
+
+      self.price_low = fuzzy.trapmf(self.var_price, [0, min_price, avg_price - std_price, avg_price])
+      self.price_medium = fuzzy.trimf(self.var_price, [avg_price - std_price, avg_price, avg_price + std_price])
+      self.price_high = fuzzy.trapmf(self.var_price, [avg_price, avg_price + std_price, max_price, max_price])
+
+      self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
+      self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
+
+    def plot(self):
+        fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4, figsize=(8, 9))
+
+        ax0.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
+        ax0.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
+        ax0.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
+        ax0.set_title("Delivery time")
+        ax0.legend()
+
+        ax1.plot(self.var_punctuality, self.punctuality_low, "r", linewidth=1.5, label="Bad")
+        ax1.plot(self.var_punctuality, self.punctuality_medium, "b", linewidth=1.5, label="Regular")
+        ax1.plot(self.var_punctuality, self.punctuality_high, "g", linewidth=1.5, label="Good")
+        ax1.set_title("Punctuality")
+        ax1.legend()
+
+        ax2.plot(self.var_price, self.price_low, "g", linewidth=1.5, label="Low")
+        ax2.plot(self.var_price, self.price_medium, "b", linewidth=1.5, label="Regular")
+        ax2.plot(self.var_price, self.price_high, "r", linewidth=1.5, label="High")
+        ax2.set_title("Price")
+        ax2.legend()
+
+        ax3.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
+        ax3.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
+        ax3.set_title("Supplier")
+        ax3.legend()
+
+        for ax in [ax0, ax1, ax2, ax3]:
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.get_xaxis().tick_bottom()
+            ax.get_yaxis().tick_left()
+
+        plt.tight_layout()
+        plt.show()
+    
+    def evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN):
+        supplier_id = supplier.id
+        df_prices = self.df[["Supplier ID", "Price"]].groupby("Supplier ID")["Price"].sum()
+        
+        crisp_delivery_time = misc.mean_not_outliers(self.df, "Delivery time", (self.df["Supplier ID"] == supplier_id) & (self.df["Awarded"] == True))
+
+        crisp_price = df_prices.loc[supplier_id]
+
+        crisp_punctuality = len(self.df[(self.df["Supplier ID"] == supplier_id) & (self.df["Awarded"] == True) & (self.df["OTD"] == True)]) / len(self.df[(self.df["Supplier ID"] == supplier_id) & (self.df["Awarded"] == True)])
+
+        # Assign membership degree
+        price_level_low = fuzzy.interp_membership(self.var_price, self.price_low, crisp_price)
+        price_level_medium = fuzzy.interp_membership(self.var_price, self.price_medium, crisp_price)
+        price_level_high = fuzzy.interp_membership(self.var_price, self.price_high, crisp_price)
+
+        punctuality_level_low = fuzzy.interp_membership(self.var_punctuality, self.punctuality_low, crisp_punctuality)
+        punctuality_level_medium = fuzzy.interp_membership(self.var_punctuality, self.punctuality_medium, crisp_punctuality)
+        punctuality_level_high = fuzzy.interp_membership(self.var_punctuality, self.punctuality_high, crisp_punctuality)
+
+        delivery_time_level_low = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_low, crisp_delivery_time)
+        delivery_time_level_medium = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_medium, crisp_delivery_time)
+        delivery_time_level_high = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_high, crisp_delivery_time)
+
+        # Rule application
+        rule_1 = min(delivery_time_level_low, price_level_low) # Implement
+
+        rule_2 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)  # Implement
+
+        rule_3 = min(delivery_time_level_low, price_level_high)  # Wait
+
+        rule_4 = min(delivery_time_level_medium, price_level_low, punctuality_level_high)  # Implement
+
+        rule_5 = min(delivery_time_level_medium, price_level_medium, punctuality_level_low)    # Wait
+
+        rule_6 = min(delivery_time_level_medium, price_level_medium, punctuality_level_high)   # Implement
+
+        rule_7 = min(delivery_time_level_high, price_level_high)   # Wait
+
+        rule_8 = min(delivery_time_level_high, price_level_medium, punctuality_level_low)  # Wait
+
+        rule_9 = min(delivery_time_level_low, price_level_medium, punctuality_level_low)  # Wait
+
+        rule_10 = min(delivery_time_level_low, price_level_medium, punctuality_level_medium)  # Implement
+
+        wait_strength = max(rule_3, rule_5, rule_7, rule_8, rule_9)
+        implement_strength = max(rule_1, rule_2, rule_4, rule_6, rule_10)
+
+        supplier_activation_wait = np.fmin(wait_strength,self.supplier_wait)
+        supplier_activation_implement = np.fmin(implement_strength, self.supplier_implement)
+
+        aggregated = np.fmax.reduce([supplier_activation_wait, supplier_activation_implement])
+
+        # Defuzzification
+        supplier_score = fuzzy.defuzz(self.var_supplier, aggregated, "centroid")
+        supplier_activation = fuzzy.interp_membership(self.var_supplier, aggregated, supplier_score)
+
+        if supplier_activation_implement.max() > supplier_activation_wait.max():
+          action = "Implement"
+        else:
+            action = "Wait"
+
+        return {
+        "Supplier ID": supplier_id,
+        "Score": supplier_score,
+        "Wait": supplier_activation_wait.max(),
+        "Implement": supplier_activation_implement.max(),
+        "Action": action
+        }
