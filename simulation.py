@@ -6,7 +6,7 @@
 ###   This module provides the required clases to simulate the Sourcing     ###
 ###   NPI process. It is intended to simulate the process of sourcing       ###
 ###   copper piping in a new product introduction (NPI) project for HVAC    ###
-###   industry, from Design Freeze (P2) to Start of Production (P3)         ###
+###   industry, from Design Freeze (P2) to Start of Production (P4)         ###
 ###   stages. However, it is possible to modify this module according to    ###
 ###   the user's needs.                                                     ### 
 ###   For confidentiality purposes, statistics about prices and piping      ###
