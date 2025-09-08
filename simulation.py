@@ -956,33 +956,66 @@ class Fuzzy_Model:
 
           rule_9 = min(delivery_time_level_high, price_level_high)      # Wait
 
-
           wait_strength = max(rule_3, rule_5, rule_6, rule_7, rule_8, rule_9)
           implement_strength = max(rule_1, rule_2, rule_4)
           
         else:
-          rule_1 = min(delivery_time_level_low, price_level_low) # Implement
+          rule_1 = min(delivery_time_level_low, price_level_low, punctuality_level_low) # Implement
 
-          rule_2 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)  # Implement
+          rule_2 = min(delivery_time_level_low, price_level_low, punctuality_level_medium)  # Implement
 
-          rule_3 = min(delivery_time_level_low, price_level_high)  # Wait
+          rule_3 = min(delivery_time_level_low, price_level_low, punctuality_level_high)  # Implement
 
-          rule_4 = min(delivery_time_level_medium, price_level_low, punctuality_level_high)  # Implement
+          rule_4 = min(delivery_time_level_low, price_level_medium, punctuality_level_low)  # Implement
 
-          rule_5 = min(delivery_time_level_medium, price_level_medium, punctuality_level_low)    # Wait
+          rule_5 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)    # Implement
 
-          rule_6 = min(delivery_time_level_medium, price_level_medium, punctuality_level_high)   # Implement
+          rule_6 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)   # Implement
 
-          rule_7 = min(delivery_time_level_high, price_level_high)   # Wait
+          rule_7 = min(delivery_time_level_low, price_level_high, punctuality_level_low)   # Wait
 
-          rule_8 = min(delivery_time_level_high, price_level_medium, punctuality_level_low)  # Wait
+          rule_8 = min(delivery_time_level_low, price_level_high, punctuality_level_medium)  # Wait
 
-          rule_9 = min(delivery_time_level_low, price_level_medium, punctuality_level_low)  # Wait
+          rule_9 = min(delivery_time_level_low, price_level_high, punctuality_level_high)  # Wait
 
-          rule_10 = min(delivery_time_level_low, price_level_medium, punctuality_level_medium)  # Implement
+          rule_10 = min(delivery_time_level_medium, price_level_low, punctuality_level_low)  # Wait
 
-          wait_strength = max(rule_3, rule_5, rule_7, rule_8, rule_9)
-          implement_strength = max(rule_1, rule_2, rule_4, rule_6, rule_10)
+          rule_11 = min(delivery_time_level_medium, price_level_low, punctuality_level_medium)  # Implement
+
+          rule_12 = min(delivery_time_level_medium, price_level_low, punctuality_level_high)  # Implement
+
+          rule_13 = min(delivery_time_level_medium, price_level_medium, punctuality_level_low)  # Wait
+
+          rule_14 = min(delivery_time_level_medium, price_level_medium, punctuality_level_medium)  # Implement
+
+          rule_15 = min(delivery_time_level_medium, price_level_medium, punctuality_level_high)  # Implement
+
+          rule_16 = min(delivery_time_level_medium, price_level_high, punctuality_level_low)  # Wait
+
+          rule_17 = min(delivery_time_level_medium, price_level_high, punctuality_level_medium)  # Wait
+
+          rule_18 = min(delivery_time_level_medium, price_level_high, punctuality_level_high)  # Wait
+
+          rule_19 = min(delivery_time_level_high, price_level_low, punctuality_level_low)  # Wait
+
+          rule_20 = min(delivery_time_level_high, price_level_low, punctuality_level_medium)  # Wait
+
+          rule_21 = min(delivery_time_level_high, price_level_low, punctuality_level_high)  # Implement
+
+          rule_22 = min(delivery_time_level_high, price_level_medium, punctuality_level_low)  # Wait
+
+          rule_23 = min(delivery_time_level_high, price_level_medium, punctuality_level_medium)  # Wait
+
+          rule_24 = min(delivery_time_level_high, price_level_medium, punctuality_level_high)  # Implement
+
+          rule_25 = min(delivery_time_level_high, price_level_high, punctuality_level_low)  # Wait
+
+          rule_26 = min(delivery_time_level_high, price_level_high, punctuality_level_medium)  # Wait
+
+          rule_27 = min(delivery_time_level_high, price_level_high, punctuality_level_high)  # Wait
+
+          wait_strength = max(rule_7, rule_8, rule_9, rule_10, rule_13, rule_16, rule_17, rule_18, rule_19, rule_20, rule_22, rule_23, rule_25, rule_26, rule_27)
+          implement_strength = max(rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_11, rule_12, rule_14, rule_15, rule_21, rule_24)
 
         supplier_activation_wait = np.fmin(wait_strength,self.supplier_wait)
         supplier_activation_implement = np.fmin(implement_strength, self.supplier_implement)
