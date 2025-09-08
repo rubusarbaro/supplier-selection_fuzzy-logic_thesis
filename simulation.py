@@ -40,7 +40,7 @@ Supplier
   Represents a supplier.
 """
 
-## Dependent modules
+## Depency modules
 from datetime import date, timedelta    # To work dates.
 from math import ceil, floor
 from statistics import mean, stdev
