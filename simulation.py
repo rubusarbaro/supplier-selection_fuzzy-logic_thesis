@@ -938,28 +938,27 @@ class Fuzzy_Model:
 
         # Rule application
         if self.new_suppliers:
-          rule_1 = min(delivery_time_level_low, price_level_low) # Implement
+          rule_1 = min(delivery_time_level_low, price_level_low)        # Implement
 
-          rule_2 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)  # Implement
+          rule_2 = min(delivery_time_level_low, price_level_medium)     # Implement
 
-          rule_3 = min(delivery_time_level_low, price_level_high)  # Wait
+          rule_3 = min(delivery_time_level_low, price_level_high)       # Wait
 
-          rule_4 = min(delivery_time_level_medium, price_level_low, punctuality_level_high)  # Implement
+          rule_4 = min(delivery_time_level_medium, price_level_low)     # Implement
 
-          rule_5 = min(delivery_time_level_medium, price_level_medium, punctuality_level_low)    # Wait
+          rule_5 = min(delivery_time_level_medium, price_level_medium)  # Wait
 
-          rule_6 = min(delivery_time_level_medium, price_level_medium, punctuality_level_high)   # Implement
+          rule_6 = min(delivery_time_level_medium, price_level_high)    # Wait
 
-          rule_7 = min(delivery_time_level_high, price_level_high)   # Wait
+          rule_7 = min(delivery_time_level_high, price_level_low)       # Wait
 
-          rule_8 = min(delivery_time_level_high, price_level_medium, punctuality_level_low)  # Wait
+          rule_8 = min(delivery_time_level_high, price_level_medium)    # Wait
 
-          rule_9 = min(delivery_time_level_low, price_level_medium, punctuality_level_low)  # Wait
+          rule_9 = min(delivery_time_level_high, price_level_high)      # Wait
 
-          rule_10 = min(delivery_time_level_low, price_level_medium, punctuality_level_medium)  # Implement
 
-          wait_strength = max(rule_3, rule_5, rule_7, rule_8, rule_9)
-          implement_strength = max(rule_1, rule_2, rule_4, rule_6, rule_10)
+          wait_strength = max(rule_3, rule_5, rule_6, rule_7, rule_8, rule_9)
+          implement_strength = max(rule_1, rule_2, rule_4)
           
         else:
           rule_1 = min(delivery_time_level_low, price_level_low) # Implement
