@@ -128,6 +128,8 @@ class Item_Master:
    def __init__(self):
       """Initialize the Item Master object."""
       columns = {
+        # Simulation data
+        "Iteration": [],
         # ECN identification data
         "Project": [],
         "ECN": [],
