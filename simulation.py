@@ -618,7 +618,7 @@ class Environment:
         if ecn.ecn_id == search_reference:
            return ecn
   
-  def get_supplier(self, search_mode: str, reference: str):
+  def get_supplier(self, search_mode: str, reference: str) -> Supplier:
     for supplier in self.suppliers:
       match search_mode:
           case "name":
@@ -816,18 +816,23 @@ class Fuzzy_Model:
       avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()
       std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
 
-      avg_price = self.df[["Supplier name", "Price"]].groupby("Supplier name").sum()["Price"].mean()
-      std_price = self.df[["Supplier name", "Price"]].groupby("Supplier name").sum()["Price"].std()
+      avg_spend = (self.df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"].mean()) / 100
+      std_spend = (self.df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"].std()) / 100
       
       max_delivery_time = ceil(avg_delivery_time + 3*std_delivery_time)
 
-      min_price = min(floor(avg_price - 3*std_price), 0)
-      max_price = ceil(avg_price + 3*std_price)
+      min_spend = (self.df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"].min()) / 100
+      max_spend = (ceil(avg_spend + 3*std_spend))
 
+      self.var_due_time = np.arange(0,721, 1)
       self.var_delivery_time = np.arange(0, max_delivery_time + 1, 1)
-      self.var_price = np.arange(min_price, max_price + 1, 0.01)
+      self.var_spend = np.arange(0, max_spend + 1, 0.01)
       self.var_punctuality = np.arange(0, 2, 0.01)
       self.var_supplier = np.arange(0, 11, 0.01)
+
+      self.due_time_low = fuzzy.trapmf(self.var_due_time, [0,0,30,60])
+      self.due_time_medium = fuzzy.trimf(self.var_due_time, [30, 60, 90])
+      self.due_time_high = fuzzy.trapmf(self.var_due_time, [60,90,720,720])
 
       self.delivery_time_low = fuzzy.trapmf(self.var_delivery_time, [0, 0, avg_delivery_time - std_delivery_time, avg_delivery_time])
       self.delivery_time_medium = fuzzy.trimf(self.var_delivery_time, [avg_delivery_time - std_delivery_time, avg_delivery_time, avg_delivery_time + std_delivery_time])
@@ -838,62 +843,33 @@ class Fuzzy_Model:
         self.punctuality_medium = fuzzy.trimf(self.var_punctuality, [0.25, 0.5, 0.75])
         self.punctuality_high = fuzzy.trapmf(self.var_punctuality, [0.5, 0.75, 1, 1])
 
-      self.price_low = fuzzy.trapmf(self.var_price, [0, min_price, avg_price - std_price, avg_price])
-      self.price_medium = fuzzy.trimf(self.var_price, [avg_price - std_price, avg_price, avg_price + std_price])
-      self.price_high = fuzzy.trapmf(self.var_price, [avg_price, avg_price + std_price, max_price, max_price])
+      self.spend_low = fuzzy.trapmf(self.var_spend, [0, min_spend, avg_spend - std_spend, avg_spend])
+      self.spend_medium = fuzzy.trimf(self.var_spend, [avg_spend - std_spend, avg_spend, avg_spend + std_spend])
+      self.spend_high = fuzzy.trapmf(self.var_spend, [avg_spend, avg_spend + std_spend, max_spend, max_spend])
 
       self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
       self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
 
     def plot(self):
         if self.new_suppliers:
-          fig, [ax0, ax1, ax2] = plt.subplots(nrows=3, figsize=(8, 9))
-
-          ax0.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
-          ax0.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
-          ax0.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
-          ax0.set_title("Delivery time")
-          ax0.legend()
-
-          ax1.plot(self.var_price, self.price_low, "g", linewidth=1.5, label="Low")
-          ax1.plot(self.var_price, self.price_medium, "b", linewidth=1.5, label="Regular")
-          ax1.plot(self.var_price, self.price_high, "r", linewidth=1.5, label="High")
-          ax1.set_title("Price")
-          ax1.legend()
-
-          ax2.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
-          ax2.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
-          ax2.set_title("Supplier")
-          ax2.legend()
-
-          for ax in [ax0, ax1, ax2]:
-              ax.spines["top"].set_visible(False)
-              ax.spines["right"].set_visible(False)
-              ax.get_xaxis().tick_bottom()
-              ax.get_yaxis().tick_left()
-
-          plt.tight_layout()
-          plt.show()
-
-        else:
           fig, [ax0, ax1, ax2, ax3] = plt.subplots(nrows=4, figsize=(8, 9))
 
-          ax0.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
-          ax0.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
-          ax0.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
-          ax0.set_title("Delivery time")
+          ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
+          ax0.plot(self.var_due_time, self.due_time_medium, "b", linewidth=1.5, label="Near")
+          ax0.plot(self.var_due_time, self.due_time_high, "g", linewidth=1.5, label="Far")
+          ax0.set_title("Due time")
           ax0.legend()
 
-          ax1.plot(self.var_price, self.price_low, "g", linewidth=1.5, label="Low")
-          ax1.plot(self.var_price, self.price_medium, "b", linewidth=1.5, label="Regular")
-          ax1.plot(self.var_price, self.price_high, "r", linewidth=1.5, label="High")
-          ax1.set_title("Price")
+          ax1.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
+          ax1.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
+          ax1.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
+          ax1.set_title("Delivery time")
           ax1.legend()
 
-          ax2.plot(self.var_punctuality, self.punctuality_low, "r", linewidth=1.5, label="Bad")
-          ax2.plot(self.var_punctuality, self.punctuality_medium, "b", linewidth=1.5, label="Regular")
-          ax2.plot(self.var_punctuality, self.punctuality_high, "g", linewidth=1.5, label="Good")
-          ax2.set_title("Punctuality")
+          ax2.plot(self.var_spend, self.spend_low, "g", linewidth=1.5, label="Low")
+          ax2.plot(self.var_spend, self.spend_medium, "b", linewidth=1.5, label="Regular")
+          ax2.plot(self.var_spend, self.spend_high, "r", linewidth=1.5, label="High")
+          ax2.set_title("FY Spend")
           ax2.legend()
 
           ax3.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
@@ -909,17 +885,70 @@ class Fuzzy_Model:
 
           plt.tight_layout()
           plt.show()
+
+        else:
+          fig, [ax0, ax1, ax2, ax3, ax4] = plt.subplots(nrows=5, figsize=(8, 9))
+
+          ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
+          ax0.plot(self.var_due_time, self.due_time_medium, "b", linewidth=1.5, label="Near")
+          ax0.plot(self.var_due_time, self.due_time_high, "g", linewidth=1.5, label="Far")
+          ax0.set_title("Due time")
+          ax0.legend()
+
+
+          ax1.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
+          ax1.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
+          ax1.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
+          ax1.set_title("Delivery time")
+          ax1.legend()
+
+          ax2.plot(self.var_spend, self.spend_low, "g", linewidth=1.5, label="Low")
+          ax2.plot(self.var_spend, self.spend_medium, "b", linewidth=1.5, label="Regular")
+          ax2.plot(self.var_spend, self.spend_high, "r", linewidth=1.5, label="High")
+          ax2.set_title("FY Spend")
+          ax2.legend()
+
+          ax3.plot(self.var_punctuality, self.punctuality_low, "r", linewidth=1.5, label="Bad")
+          ax3.plot(self.var_punctuality, self.punctuality_medium, "b", linewidth=1.5, label="Regular")
+          ax3.plot(self.var_punctuality, self.punctuality_high, "g", linewidth=1.5, label="Good")
+          ax3.set_title("Punctuality")
+          ax3.legend()
+
+          ax4.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
+          ax4.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
+          ax4.set_title("Supplier")
+          ax4.legend()
+
+          for ax in [ax0, ax1, ax2, ax3, ax4]:
+              ax.spines["top"].set_visible(False)
+              ax.spines["right"].set_visible(False)
+              ax.get_xaxis().tick_bottom()
+              ax.get_yaxis().tick_left()
+
+          plt.tight_layout()
+          plt.show()
     
-    def evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN):
+    def evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN, updated_df: pd.DataFrame):
+        self.df = updated_df
+
         supplier_id = supplier.id
-        df_prices = self.df[["Supplier ID", "Price"]].groupby("Supplier ID")["Price"].sum()
+        df_spend = self.df[["Supplier ID", "FY Spend"]].groupby("Supplier ID")["FY Spend"].sum()
 
+        sop_date = quotation_ecn.project.important_dates["SOP"]
+        quotation_date = updated_df[(updated_df["Supplier ID"] == supplier.id) & (updated_df["ECN"] == quotation_ecn.ecn_id)]["Quotation date"].max()
+        due_time = sop_date - quotation_date
+        crisp_due_time = max(due_time.days, 0)
+
+        due_time_level_low = fuzzy.interp_membership(self.var_due_time, self.due_time_low, crisp_due_time)
+        due_time_level_medium = fuzzy.interp_membership(self.var_due_time, self.due_time_medium, crisp_due_time)
+        due_time_level_high = fuzzy.interp_membership(self.var_due_time, self.due_time_high, crisp_due_time)
+        
         # Assign membership degree
-        crisp_price = df_prices.loc[supplier_id]
+        crisp_spend = (df_spend.loc[supplier_id]) / 100
 
-        price_level_low = fuzzy.interp_membership(self.var_price, self.price_low, crisp_price)
-        price_level_medium = fuzzy.interp_membership(self.var_price, self.price_medium, crisp_price)
-        price_level_high = fuzzy.interp_membership(self.var_price, self.price_high, crisp_price)
+        spend_level_low = fuzzy.interp_membership(self.var_spend, self.spend_low, crisp_spend)
+        spend_level_medium = fuzzy.interp_membership(self.var_spend, self.spend_medium, crisp_spend)
+        spend_level_high = fuzzy.interp_membership(self.var_spend, self.spend_high, crisp_spend)
 
         if self.new_suppliers:
           crisp_delivery_time = self.df[(self.df["Supplier ID"] == supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
@@ -930,7 +959,7 @@ class Fuzzy_Model:
           punctuality_level_medium = fuzzy.interp_membership(self.var_punctuality, self.punctuality_medium, crisp_punctuality)
           punctuality_level_high = fuzzy.interp_membership(self.var_punctuality, self.punctuality_high, crisp_punctuality)
 
-          crisp_delivery_time = misc.mean_not_outliers(self.df, "Delivery time", (self.df["Supplier ID"] == supplier_id) & (self.df["Awarded"] == True))
+          crisp_delivery_time = self.df[(self.df["Supplier ID"] == supplier.id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
 
         delivery_time_level_low = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_low, crisp_delivery_time)
         delivery_time_level_medium = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_medium, crisp_delivery_time)
@@ -938,84 +967,76 @@ class Fuzzy_Model:
 
         # Rule application
         if self.new_suppliers:
-          rule_1 = min(delivery_time_level_low, price_level_low)        # Implement
+          rule_1 = min(due_time_level_low, delivery_time_level_low, max(spend_level_low, spend_level_medium)) # Implement
+          
+          rule_2 = min(due_time_level_low, delivery_time_level_low, spend_level_high) # Wait
 
-          rule_2 = min(delivery_time_level_low, price_level_medium)     # Implement
+          rule_3 = min(due_time_level_low, delivery_time_level_medium, max(spend_level_low, spend_level_medium))  # Implement
 
-          rule_3 = min(delivery_time_level_low, price_level_high)       # Wait
+          rule_4 = min(due_time_level_low, delivery_time_level_medium, spend_level_high)  # Wait
 
-          rule_4 = min(delivery_time_level_medium, price_level_low)     # Implement
+          rule_5 = min(due_time_level_low, delivery_time_level_high)  # Wait
 
-          rule_5 = min(delivery_time_level_medium, price_level_medium)  # Wait
+          rule_6 = min(due_time_level_medium, max(delivery_time_level_low, delivery_time_level_medium), max(spend_level_low, spend_level_medium)) # Implement
 
-          rule_6 = min(delivery_time_level_medium, price_level_high)    # Wait
+          rule_7 = min(due_time_level_medium, spend_level_high) # Wait
 
-          rule_7 = min(delivery_time_level_high, price_level_low)       # Wait
+          rule_8 = min(due_time_level_medium, delivery_time_level_high) # Wait
 
-          rule_8 = min(delivery_time_level_high, price_level_medium)    # Wait
+          rule_9 = min(due_time_level_high, max(delivery_time_level_low, delivery_time_level_medium), spend_level_low)  # Implement
 
-          rule_9 = min(delivery_time_level_high, price_level_high)      # Wait
+          rule_10 = min(due_time_level_high, max(delivery_time_level_medium, delivery_time_level_high), max(spend_level_medium, spend_level_high))  # Wait
 
-          wait_strength = max(rule_3, rule_5, rule_6, rule_7, rule_8, rule_9)
-          implement_strength = max(rule_1, rule_2, rule_4)
+          rule_11 = min(due_time_level_high, delivery_time_level_high)  # Wait
+
+          wait_strength = max(rule_2, rule_4, rule_5, rule_7, rule_8, rule_10, rule_11)
+          implement_strength = max(rule_1, rule_3, rule_6, rule_9)
           
         else:
-          rule_1 = min(delivery_time_level_low, price_level_low, punctuality_level_low) # Implement
+          rule_1 = min(due_time_level_low, delivery_time_level_low, punctuality_level_low) # Wait
 
-          rule_2 = min(delivery_time_level_low, price_level_low, punctuality_level_medium)  # Implement
+          rule_2 = min(due_time_level_low, delivery_time_level_low, punctuality_level_medium, spend_level_high)  # Wait
 
-          rule_3 = min(delivery_time_level_low, price_level_low, punctuality_level_high)  # Implement
+          rule_3 = min(due_time_level_low, max(delivery_time_level_medium, delivery_time_level_high), max(punctuality_level_low, punctuality_level_medium))  # Wait
 
-          rule_4 = min(delivery_time_level_low, price_level_medium, punctuality_level_low)  # Implement
+          rule_4 = min(due_time_level_low, delivery_time_level_medium, punctuality_level_high)  # Implement
 
-          rule_5 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)    # Implement
+          rule_5 = min(due_time_level_low, delivery_time_level_low, punctuality_level_medium, max(spend_level_low, spend_level_medium))  # Implement
 
-          rule_6 = min(delivery_time_level_low, price_level_medium, punctuality_level_high)   # Implement
+          rule_6 = min(due_time_level_low, delivery_time_level_low, punctuality_level_high)    # Implement
 
-          rule_7 = min(delivery_time_level_low, price_level_high, punctuality_level_low)   # Wait
+          rule_7 = min(due_time_level_medium, max(delivery_time_level_low, delivery_time_level_medium), punctuality_level_low)   # Wait
 
-          rule_8 = min(delivery_time_level_low, price_level_high, punctuality_level_medium)  # Wait
+          rule_8 = min(due_time_level_medium, max(delivery_time_level_low, delivery_time_level_medium), max(punctuality_level_medium, punctuality_level_high), max(spend_level_low, spend_level_medium))   # Implement
 
-          rule_9 = min(delivery_time_level_low, price_level_high, punctuality_level_high)  # Wait
+          rule_9 = min(due_time_level_medium, max(delivery_time_level_low, delivery_time_level_medium), max(punctuality_level_medium, punctuality_level_high), spend_level_high)  # Wait
 
-          rule_10 = min(delivery_time_level_medium, price_level_low, punctuality_level_low)  # Wait
+          rule_10 = min(due_time_level_medium, delivery_time_level_high)  # Wait
 
-          rule_11 = min(delivery_time_level_medium, price_level_low, punctuality_level_medium)  # Implement
+          rule_11 = min(due_time_level_high, delivery_time_level_low, spend_level_low)  # Implement
 
-          rule_12 = min(delivery_time_level_medium, price_level_low, punctuality_level_high)  # Implement
+          rule_12 = min(due_time_level_high, delivery_time_level_low, punctuality_level_high, spend_level_medium)  # Implement
 
-          rule_13 = min(delivery_time_level_medium, price_level_medium, punctuality_level_low)  # Wait
+          rule_13 = min(due_time_level_high, delivery_time_level_low, max(punctuality_level_low, punctuality_level_medium), max(spend_level_medium, spend_level_high))  # Wait
 
-          rule_14 = min(delivery_time_level_medium, price_level_medium, punctuality_level_medium)  # Implement
+          rule_14 = min(due_time_level_high, delivery_time_level_low, punctuality_level_high, spend_level_high)  # Wait
 
-          rule_15 = min(delivery_time_level_medium, price_level_medium, punctuality_level_high)  # Implement
+          rule_15 = min(due_time_level_high, delivery_time_level_medium, punctuality_level_low, spend_level_medium)  # Wait
 
-          rule_16 = min(delivery_time_level_medium, price_level_high, punctuality_level_low)  # Wait
+          rule_16 = min(due_time_level_high, max(delivery_time_level_medium, delivery_time_level_high), spend_level_high)  # Wait
 
-          rule_17 = min(delivery_time_level_medium, price_level_high, punctuality_level_medium)  # Wait
+          rule_17 = min(due_time_level_high, delivery_time_level_high, punctuality_level_low, spend_level_medium)  # Wait
 
-          rule_18 = min(delivery_time_level_medium, price_level_high, punctuality_level_high)  # Wait
+          rule_18 = min(due_time_level_high, delivery_time_level_medium, punctuality_level_low, spend_level_low)  # Implement
 
-          rule_19 = min(delivery_time_level_high, price_level_low, punctuality_level_low)  # Wait
+          rule_19 = min(due_time_level_high, delivery_time_level_medium, max(punctuality_level_medium, punctuality_level_high), max(spend_level_low, spend_level_medium))  # Implement
 
-          rule_20 = min(delivery_time_level_high, price_level_low, punctuality_level_medium)  # Wait
+          rule_20 = min(due_time_level_high, delivery_time_level_high, punctuality_level_low, spend_level_low)  # Implement
 
-          rule_21 = min(delivery_time_level_high, price_level_low, punctuality_level_high)  # Implement
+          rule_21 = min(due_time_level_high, delivery_time_level_high, max(punctuality_level_medium, punctuality_level_high), max(spend_level_low, spend_level_medium))  # Implement
 
-          rule_22 = min(delivery_time_level_high, price_level_medium, punctuality_level_low)  # Wait
-
-          rule_23 = min(delivery_time_level_high, price_level_medium, punctuality_level_medium)  # Wait
-
-          rule_24 = min(delivery_time_level_high, price_level_medium, punctuality_level_high)  # Implement
-
-          rule_25 = min(delivery_time_level_high, price_level_high, punctuality_level_low)  # Wait
-
-          rule_26 = min(delivery_time_level_high, price_level_high, punctuality_level_medium)  # Wait
-
-          rule_27 = min(delivery_time_level_high, price_level_high, punctuality_level_high)  # Wait
-
-          wait_strength = max(rule_7, rule_8, rule_9, rule_10, rule_13, rule_16, rule_17, rule_18, rule_19, rule_20, rule_22, rule_23, rule_25, rule_26, rule_27)
-          implement_strength = max(rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_11, rule_12, rule_14, rule_15, rule_21, rule_24)
+          wait_strength = max(rule_1, rule_2, rule_3, rule_7, rule_9, rule_10, rule_13, rule_14, rule_15, rule_16, rule_17)
+          implement_strength = max(rule_4, rule_5, rule_6, rule_8, rule_11, rule_12, rule_18, rule_19, rule_20, rule_21)
 
         supplier_activation_wait = np.fmin(wait_strength,self.supplier_wait)
         supplier_activation_implement = np.fmin(implement_strength, self.supplier_implement)
