@@ -245,6 +245,7 @@ class ECN:
         self.project = project
         self.ecn_id = f"ECN{str(ECN.instances).zfill(7)}"
         self.ecn_date = ecn_date
+        self.status = "Under review"  # Status are: "Under review", "Engineering release" and "Release for production"
         self.items = pn_list
         self.quotations = []
 
@@ -275,6 +276,10 @@ class ECN:
         df.loc[len(df)] = [self.project.name, self.ecn_id, self.ecn_date, item.pn, item.complexity, item.eau]
 
       return df
+    
+    def reset(self):
+       self.status = "Under review"
+       self.quotations = []
 
 class Quotation:
     """
@@ -638,6 +643,7 @@ class Environment:
 
   def quote_ecn_all_suppliers(self, ecn: ECN):
     µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
+    ecn.status = "Engineering release"
 
     for supplier in self.active_suppliers:
       rfq_date = ecn.ecn_date + timedelta(days=max(round(np.random.normal(loc=µ_rfq_time, scale=σ_rfq_time)), 0))
@@ -649,6 +655,7 @@ class Environment:
   
   def quote_ecn_some_suppliers(self, ecn: ECN, quoting_suppliers: list[Supplier]):
     µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
+    ecn.status = "Engineering release"
 
     for supplier in quoting_suppliers:
       if supplier in self.active_suppliers:
@@ -777,6 +784,7 @@ class Environment:
       ]
 
     awarded_supplier.awarded_ecns.append(ecn)
+    ecn.status = "Released for production"
     return self.item_master[(self.item_master["ECN"] == ecn.ecn_id) & (self.item_master["Supplier ID"] == awarded_supplier.id)]
 
   def quote_all_ecns(self):
