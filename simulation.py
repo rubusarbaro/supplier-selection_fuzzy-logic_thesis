@@ -853,12 +853,21 @@ class Fuzzy_Model:
         self.punctuality_medium = fuzzy.trimf(self.var_punctuality, [0.25, 0.5, 0.75])
         self.punctuality_high = fuzzy.trapmf(self.var_punctuality, [0.5, 0.75, 1, 1])
 
-      self.spend_low = fuzzy.trapmf(self.var_spend, [0, min_spend, avg_spend - std_spend, avg_spend])
+      self.spend_low = fuzzy.trapmf(self.var_spend, [0, max(min_spend, 0), avg_spend - std_spend, avg_spend])
       self.spend_medium = fuzzy.trimf(self.var_spend, [avg_spend - std_spend, avg_spend, avg_spend + std_spend])
       self.spend_high = fuzzy.trapmf(self.var_spend, [avg_spend, avg_spend + std_spend, max_spend, max_spend])
 
       self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
       self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
+
+      print(f"Avg delivery: {avg_delivery_time}")
+      print(f"Std delivery: {std_delivery_time}")
+      print(f"Max delivery: {max_delivery_time}")
+      
+      print(f"Avg spend: {avg_spend}")
+      print(f"Std spend: {std_spend}")
+      print(f"Min spend: {min_spend}")
+      print(f"Max spend: {max_spend}")
 
     def plot(self):
         if self.new_suppliers:
