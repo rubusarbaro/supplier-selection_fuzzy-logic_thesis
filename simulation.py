@@ -638,7 +638,20 @@ class Environment:
               return supplier
               
   def import_ecns_from_df(self, df: pd.DataFrame):
-    pass
+    for ecn in df["ECN"].unique():
+       ecn_part_numbers = []
+
+       for pn in df[df["ECN"] == ecn]["Part number"]:
+          category_part_number = len(self.part_kinds[pn[2]]["parts"]) + 1
+          complexity = df[df["Part number"] == pn]["Complexity"].item()
+          eau = df[df["Part number"] == pn]["EAU"].item()
+
+          part_number = Part_Number(pn=f"A0{pn[2]}{str(category_part_number).zfill(6)}", complexity=complexity, eau=eau)
+
+          self.part_kinds[pn[2]]["parts"].append(part_number)
+          ecn_part_numbers.append(part_number)
+
+    # INCOMPLETO
 
   def quote_all_ecn_project_all_suppliers(self, project: Project):
      for ecn in project.ecns:
