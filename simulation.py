@@ -636,6 +636,9 @@ class Environment:
               raise Exception("Supplier ID length must be 8 characters.")
             if supplier.id == reference:
               return supplier
+              
+  def import_ecns_from_df(self, df: pd.DataFrame):
+    pass
 
   def quote_all_ecn_project_all_suppliers(self, project: Project):
      for ecn in project.ecns:
