@@ -825,9 +825,9 @@ class Fuzzy_Model:
 
       avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()
       std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
-      max_delivery_time = ceil(avg_delivery_time + 3*std_delivery_time)
+      max_delivery_time = ceil(max(avg_delivery_time + 3*std_delivery_time, self.df[(self.df["Awarded"] == True)]["Delivery time"].max()))
 
-      spend_df = self.df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"].drop([0])
+      spend_df = self.df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"]
       avg_spend = (spend_df.mean()) / 100
       std_spend = (spend_df.std()) / 100
       min_spend = (spend_df.min()) / 100
