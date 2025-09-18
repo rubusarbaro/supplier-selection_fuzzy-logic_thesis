@@ -651,6 +651,13 @@ class Environment:
 
           self.part_kinds[pn[2]]["parts"].append(part_number)
           ecn_part_numbers.append(part_number)
+      
+       ecn = ECN(project=project, ecn_date=ecn_date, pn_list=ecn_part_numbers)
+       self.ecns.append(ecn)
+       project.ecns.append(ecn)
+       ecns.append(ecn)
+
+    return ecns
 
     # INCOMPLETO
 
