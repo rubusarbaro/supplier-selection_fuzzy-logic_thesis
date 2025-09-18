@@ -640,6 +640,7 @@ class Environment:
   def import_ecns_from_df(self, df: pd.DataFrame):
     for ecn in df["ECN"].unique():
        ecn_part_numbers = []
+       ecn_date = df[df["ECN"] == ecn]["ECN release"].iloc[0].date()
 
        for pn in df[df["ECN"] == ecn]["Part number"]:
           category_part_number = len(self.part_kinds[pn[2]]["parts"]) + 1
