@@ -637,7 +637,8 @@ class Environment:
             if supplier.id == reference:
               return supplier
               
-  def import_ecns_from_df(self, df: pd.DataFrame):
+  def import_ecns_from_df(self, project: Project, df: pd.DataFrame):
+    ecns = []
     for ecn in df["ECN"].unique():
        ecn_part_numbers = []
        ecn_date = df[df["ECN"] == ecn]["ECN release"].iloc[0].date()
@@ -658,8 +659,6 @@ class Environment:
        ecns.append(ecn)
 
     return ecns
-
-    # INCOMPLETO
 
   def quote_all_ecn_project_all_suppliers(self, project: Project):
      for ecn in project.ecns:
@@ -843,7 +842,9 @@ class Environment:
     return (mean(punctuality_list), stdev(punctuality_list))
   
 class Fuzzy_Model:
-    def __init__(self, df_item_master: pd.DataFrame, new_suppliers: bool = False):
+    def __init__(self, df_item_master: pd.DataFrame, ref_supplier: Supplier, quotation_ecn: ECN, new_suppliers: bool = False):
+      quoted_pn = self.df[self.df["Supplier ID"] == ref_supplier.id]["Part number"]
+
       self.df = df_item_master
       self.new_suppliers = new_suppliers
 
@@ -851,7 +852,8 @@ class Fuzzy_Model:
       std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
       max_delivery_time = ceil(max(avg_delivery_time + 3*std_delivery_time, self.df[(self.df["Awarded"] == True)]["Delivery time"].max()))
 
-      spend_df = self.df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"]
+      quotations_df = self.df[self.df["Part number"].isin(quoted_pn)]
+      spend_df = quotations_df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"]
       avg_spend = (spend_df.mean()) / 100
       std_spend = (spend_df.std()) / 100
       min_spend = (spend_df.min()) / 100
@@ -891,6 +893,8 @@ class Fuzzy_Model:
       print(f"Std spend: {std_spend}")
       print(f"Min spend: {min_spend}")
       print(f"Max spend: {max_spend}")
+
+      self._evaluate_supplier(ref_supplier, quotation_ecn, self.df)
 
     def plot(self):
         if self.new_suppliers:
@@ -970,7 +974,7 @@ class Fuzzy_Model:
           plt.tight_layout()
           plt.show()
     
-    def evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN, updated_df: pd.DataFrame):
+    def _evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN, updated_df: pd.DataFrame):
         self.df = updated_df
 
         supplier_id = supplier.id
