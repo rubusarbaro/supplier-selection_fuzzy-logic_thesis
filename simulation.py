@@ -659,6 +659,41 @@ class Environment:
        ecns.append(ecn)
 
     return ecns
+  
+  def import_training_df(self, training_df: pd.DataFrame):
+    self.item_master = training_df
+
+    project_names = training_df["Project"].unique()
+    project_data = {}
+    for project_name in project_names:
+      project_data[project_name] = Project(project_name, date(2025,9,18), date(2025,9,18), date(2025,9,18), date(2025,9,18))
+
+    ecn_list = training_df["ECN"].unique()
+    ecn_part_list = {}
+    for ecn_id in ecn_list:
+        ecn_part_list[ecn_id] = []
+
+    pn_list = training_df["Part number"].unique()
+    for pn in pn_list:
+      pn_ecn = training_df[training_df["Part number"] == pn]["ECN"].iloc[0]
+      pn_complexity = training_df[training_df["Part number"] == pn]["Complexity"].iloc[0]
+      pn_eau = training_df[training_df["Part number"] == pn]["EAU"].max()
+
+      part_number = Part_Number(pn=pn, complexity=pn_complexity, eau=pn_eau)
+
+      self.part_kinds[pn[2]]["parts"].append(part_number)
+      ecn_part_list[pn_ecn].append(part_number)
+    
+    for ecn_id in ecn_part_list.keys():
+      ecn_project = project_data[training_df[training_df["ECN"] == ecn_id]["Project"].iloc[0]]
+      ecn = ECN(
+        project=ecn_project,
+        ecn_date=training_df[training_df["ECN"] == ecn_id]["ECN release"].max(),
+        pn_list=ecn_part_list[ecn_id]
+      )
+
+      self.ecns.append(ecn)
+      ecn_project.ecns.append(ecn)
 
   def quote_all_ecn_project_all_suppliers(self, project: Project):
      for ecn in project.ecns:
@@ -891,14 +926,14 @@ class Fuzzy_Model:
       self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
       self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
 
-      print(f"Avg delivery: {avg_delivery_time}")
-      print(f"Std delivery: {std_delivery_time}")
-      print(f"Max delivery: {max_delivery_time}")
+      #print(f"Avg delivery: {avg_delivery_time}")
+      #print(f"Std delivery: {std_delivery_time}")
+      #print(f"Max delivery: {max_delivery_time}")
       
-      print(f"Avg spend: {avg_spend}")
-      print(f"Std spend: {std_spend}")
-      print(f"Min spend: {min_spend}")
-      print(f"Max spend: {max_spend}")
+      #print(f"Avg spend: {avg_spend}")
+      #print(f"Std spend: {std_spend}")
+      #print(f"Min spend: {min_spend}")
+      #print(f"Max spend: {max_spend}")
 
       if not self.__completely_new_supplier:
         self.stats = self._evaluate_supplier(supplier=ref_supplier, quotation_ecn=quotation_ecn, updated_df=self.df)
