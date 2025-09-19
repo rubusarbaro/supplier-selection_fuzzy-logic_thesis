@@ -897,6 +897,10 @@ class Fuzzy_Model:
       min_spend = (self.spend_df.min()) / 100
       max_spend = (ceil(avg_spend + 3*std_spend))
 
+      if ref_supplier.id == "10000082": # For debugging purposes
+         print(f"Supplier: {ref_supplier.id}")
+         print(f"Average spend: {avg_spend}")
+
       if len(self.spend_df) < 2:
         self.__completely_new_supplier = True
 
