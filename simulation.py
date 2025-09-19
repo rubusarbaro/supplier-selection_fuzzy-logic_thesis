@@ -842,22 +842,28 @@ class Environment:
     return (mean(punctuality_list), stdev(punctuality_list))
   
 class Fuzzy_Model:
-    def __init__(self, df_item_master: pd.DataFrame, ref_supplier: Supplier, quotation_ecn: ECN, new_suppliers: bool = False):
-      quoted_pn = self.df[self.df["Supplier ID"] == ref_supplier.id]["Part number"]
-
+    def __init__(self, df_item_master: pd.DataFrame, ref_supplier: Supplier, quotation_ecn: ECN, new_suppliers: bool = False, imported_data: bool = False):
       self.df = df_item_master
       self.new_suppliers = new_suppliers
+      self.__completely_new_supplier = False
+      self.working_imported_data = imported_data
+      self.evaluating_supplier_id = ref_supplier.id
+      
+      quoted_pn = self.df[self.df["Supplier ID"] == self.evaluating_supplier_id]["Part number"]
 
       avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()
       std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
       max_delivery_time = ceil(max(avg_delivery_time + 3*std_delivery_time, self.df[(self.df["Awarded"] == True)]["Delivery time"].max()))
 
       quotations_df = self.df[self.df["Part number"].isin(quoted_pn)]
-      spend_df = quotations_df[["Supplier name", "FY Spend"]].groupby("Supplier name").sum()["FY Spend"]
-      avg_spend = (spend_df.mean()) / 100
-      std_spend = (spend_df.std()) / 100
-      min_spend = (spend_df.min()) / 100
+      self.spend_df = quotations_df[["Supplier ID", "FY Spend"]].groupby("Supplier ID").sum()["FY Spend"]
+      avg_spend = (self.spend_df.mean()) / 100
+      std_spend = (self.spend_df.std()) / 100
+      min_spend = (self.spend_df.min()) / 100
       max_spend = (ceil(avg_spend + 3*std_spend))
+
+      if len(self.spend_df) < 2:
+        self.__completely_new_supplier = True
 
       self.var_due_time = np.arange(0,721, 1)
       self.var_delivery_time = np.arange(0, max_delivery_time + 1, 1)
@@ -894,7 +900,19 @@ class Fuzzy_Model:
       print(f"Min spend: {min_spend}")
       print(f"Max spend: {max_spend}")
 
-      self._evaluate_supplier(ref_supplier, quotation_ecn, self.df)
+      if not self.__completely_new_supplier:
+        self.stats = self._evaluate_supplier(supplier=ref_supplier, quotation_ecn=quotation_ecn, updated_df=self.df)
+      else:
+         self.stats = {
+        "Supplier ID": ref_supplier.id,
+        "Score": 0,
+        "Wait": 1,
+        "Implement": 0,
+        "Action": "wait"
+        }
+    
+    def get_stats(self):
+       return self.stats
 
     def plot(self):
         if self.new_suppliers:
@@ -977,11 +995,8 @@ class Fuzzy_Model:
     def _evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN, updated_df: pd.DataFrame):
         self.df = updated_df
 
-        supplier_id = supplier.id
-        df_spend = self.df[["Supplier ID", "FY Spend"]].groupby("Supplier ID")["FY Spend"].sum()
-
         sop_date = quotation_ecn.project.important_dates["SOP"]
-        quotation_date = updated_df[(updated_df["Supplier ID"] == supplier.id) & (updated_df["ECN"] == quotation_ecn.ecn_id)]["Quotation date"].max()
+        quotation_date = updated_df[(updated_df["Supplier ID"] == self.evaluating_supplier_id) & (updated_df["ECN"] == quotation_ecn.ecn_id)]["Quotation date"].max()
         due_time = sop_date - quotation_date
         crisp_due_time = max(due_time.days, 0)
 
@@ -990,22 +1005,22 @@ class Fuzzy_Model:
         due_time_level_high = fuzzy.interp_membership(self.var_due_time, self.due_time_high, crisp_due_time)
         
         # Assign membership degree
-        crisp_spend = (df_spend.loc[supplier_id]) / 100
+        crisp_spend = (self.spend_df.loc[self.evaluating_supplier_id]) / 100
 
         spend_level_low = fuzzy.interp_membership(self.var_spend, self.spend_low, crisp_spend)
         spend_level_medium = fuzzy.interp_membership(self.var_spend, self.spend_medium, crisp_spend)
         spend_level_high = fuzzy.interp_membership(self.var_spend, self.spend_high, crisp_spend)
 
         if self.new_suppliers:
-          crisp_delivery_time = self.df[(self.df["Supplier ID"] == supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
+          crisp_delivery_time = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
         else:
-          crisp_punctuality = len(self.df[(self.df["Supplier ID"] == supplier_id) & (self.df["Awarded"] == True) & (self.df["OTD"] == True)]) / len(self.df[(self.df["Supplier ID"] == supplier_id) & (self.df["Awarded"] == True)])
+          crisp_punctuality = len(self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True) & (self.df["OTD"] == True)]) / len(self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True)])
 
           punctuality_level_low = fuzzy.interp_membership(self.var_punctuality, self.punctuality_low, crisp_punctuality)
           punctuality_level_medium = fuzzy.interp_membership(self.var_punctuality, self.punctuality_medium, crisp_punctuality)
           punctuality_level_high = fuzzy.interp_membership(self.var_punctuality, self.punctuality_high, crisp_punctuality)
 
-          crisp_delivery_time = self.df[(self.df["Supplier ID"] == supplier.id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
+          crisp_delivery_time = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
 
         delivery_time_level_low = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_low, crisp_delivery_time)
         delivery_time_level_medium = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_medium, crisp_delivery_time)
@@ -1083,7 +1098,7 @@ class Fuzzy_Model:
             action = "Wait"
 
         return {
-        "Supplier ID": supplier_id,
+        "Supplier ID": self.evaluating_supplier_id,
         "Score": supplier_score,
         "Wait": supplier_activation_wait.max(),
         "Implement": supplier_activation_implement.max(),
