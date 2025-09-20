@@ -897,10 +897,6 @@ class Fuzzy_Model:
       min_spend = (self.spend_df.min()) / 100
       max_spend = (ceil(avg_spend + 3*std_spend))
 
-      if ref_supplier.id == "10000082": # For debugging purposes
-         print(f"Supplier: {ref_supplier.id}")
-         print(f"Average spend: {avg_spend}")
-
       if len(self.spend_df) < 2:
         self.__completely_new_supplier = True
 
@@ -923,7 +919,7 @@ class Fuzzy_Model:
         self.punctuality_medium = fuzzy.trimf(self.var_punctuality, [0.25, 0.5, 0.75])
         self.punctuality_high = fuzzy.trapmf(self.var_punctuality, [0.5, 0.75, 1, 1])
 
-      self.spend_low = fuzzy.trapmf(self.var_spend, [0, max(min_spend, 0), avg_spend - std_spend, avg_spend])
+      self.spend_low = fuzzy.trapmf(self.var_spend, [0, min_spend, max(min_spend, avg_spend - std_spend), max(avg_spend - std_spend, avg_spend)])
       self.spend_medium = fuzzy.trimf(self.var_spend, [avg_spend - std_spend, avg_spend, avg_spend + std_spend])
       self.spend_high = fuzzy.trapmf(self.var_spend, [avg_spend, avg_spend + std_spend, max_spend, max_spend])
 
