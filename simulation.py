@@ -1125,10 +1125,26 @@ class Fuzzy_Model:
         else:
             action = "Wait"
 
-        return {
+        stats = {
             "Supplier ID": self.evaluating_supplier_id,
+            "New supplier": self.new_suppliers,
             "Score": supplier_score,
             "Wait": supplier_activation_wait.max(),
             "Implement": supplier_activation_implement.max(),
             "Action": action
         }
+
+        if self.new_suppliers:
+            rule_number = 1
+            for rule in [rule_1, rule_2, rule_3, rule_4, rule_5, rule_6]:
+                stats[f"Rule {rule_number}"] = rule
+                rule_number += 1
+            for i in range(7,19):
+                stats[f"Rule {i}"] = np.nan
+        else:
+            rule_number = 1
+            for rule in [rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_7, rule_8, rule_9, rule_10, rule_11, rule_12, rule_13, rule_14, rule_15, rule_16, rule_17, rule_18]:
+                stats[f"Rule {rule_number}"] = rule
+                rule_number += 1
+
+        return stats
