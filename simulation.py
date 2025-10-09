@@ -44,7 +44,9 @@ Supplier
 
 ## Depency modules
 from datetime import date, timedelta    # To work dates.
+from dotenv import load_dotenv  # variables.
 from math import ceil, floor
+from os import getenv
 from statistics import mean, stdev
 from random import choice, random       # To generate random numbers.
 import matplotlib.pyplot as plt
@@ -53,21 +55,8 @@ import misc
 import numpy as np                      # To generate random numbers.
 import pandas as pd                     # To work with data frames.
 import skfuzzy as fuzzy
-import sys                              # To verify if it is running in Colab.
 
-# Verify if the module is running in a Google Colab module.
-if "google.colab" in sys.modules:               # If so, it renames getenv() to
-    from google.colab import userdata           # allow using secrets without
-    def getenv(secretName: str, default_value): # changing the entire code.
-        try:
-            return userdata.get(secretName)
-        except:
-            return default_value
-else:                               # Else, it imports dotenv to handle .env
-    from dotenv import load_dotenv  # variables.
-    from os import getenv
-    load_dotenv()
-
+load_dotenv()   # Load .env file with Environment secrets.
 
 class Project:
     """
@@ -81,10 +70,8 @@ class Project:
         List object containing the ECNs related to the project.
     important_dates : dict[str, date]
         Dictionary containing the important dates for the project, such as Design Freeze, MCS, Pilot and SOP.
-
-    Methods
-    -------
     """
+
     def __init__(
         self,
         name: str,
@@ -115,9 +102,10 @@ class Project:
         """Returns project name when the object is printed."""
         return self.name
 
+
 class Item_Master:
     """
-    Standarized column format for the data frame.
+    Standardized column format for the data frame.
 
     Attributes
     ----------
@@ -173,6 +161,7 @@ class Item_Master:
 
         self.df = pd.DataFrame(columns)
 
+
 class Part_Number:
     """
     Represents a single material or part number.
@@ -203,6 +192,7 @@ class Part_Number:
     def __str__(self):
         """Returns part number identifier when the object is printed."""
         return self.pn
+
 
 class ECN:
     """
@@ -344,6 +334,7 @@ class Quotation:
 
         self.df = pd.DataFrame(columns)
 
+
 class Supplier:
     """
     Represents a supplier.
@@ -351,15 +342,23 @@ class Supplier:
     Attributes
     ----------
     instances : int
+        Counter of created Suppliers.
     id : str
+        Supplier SAP ID.
     name : str
+        Supplier's name.
     quotations : list[Quotation]
+        List of the quotations that the supplier had issued.
     awarded_ecns : list[ECN]
+        List of awarded ECNs to the supplier.
     delivery_profile : str
+        It determines the delivery speed.
     quotation_profile : str
+        It determines the quotation time.
     price_profile : str
+        It determines the prices.
     punctuality_profile : str
-
+        It determines the punctuality of supplier for sample delivery.
     """
     instances = 0
 
@@ -383,8 +382,19 @@ class Supplier:
     }
 
     def __init__(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular", standard_lt: int = 0):
+        """
+        Initializes the supplier object.
+
+        Parameters:
+            name (str): Supplier name.
+            delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            quotation_profile (str): It determines the quotation time. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            price_profile (str): It determines the prices. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            punctuality_profile (str): It determines the punctuality of supplier for sample delivery. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            standard_lt (int): This is the lead time in days that the supplier usually writes in their quotation, however in real life this time usually is not met. It is 0 by default.
+        """
         Supplier.instances += 1
-        self.id = f"1{str(Supplier.instances).zfill(7)}"
+        self.id = f"1{str(Supplier.instances).zfill(7)}"    # Supplier ID is automatically calculated according to the current quantity of created suppliers.
         self.name = name
         self.quotations = []
         self.awarded_ecns = []
@@ -405,7 +415,7 @@ class Supplier:
         self.σ_delivery_time = 16.2802512871323 * σ_delivery_profile_factor
         self.minimum_delivery_time = 12 * µ_delivery_profile_factor
 
-        self.eta_difference = {
+        self.eta_difference = { # First number is the average, second number is the standard deviation.
             "punctual": (0.888888888888889, 1.01273936708367),
             "unpunctual": (4.24137931034483, 2.69463981708917)
         }
@@ -434,16 +444,28 @@ class Supplier:
         self.punctual_p = punctuality_profile_map[punctuality_profile]
 
     def __str__(self):
+        """Supplier name when the Supplier is printed."""
         return self.name
 
     def quote(self, ecn: ECN, rfq_date: date, lead_time: int = 0):
-        not_quoted_yet = True
-        for quotation in self.quotations:
-            if quotation.ecn.ecn_id == ecn.ecn_id:
-                print(f"{self.name} already quoted {ecn.ecn_id}.")
-                not_quoted_yet = False
+        """
+        The supplier quote a ECN.
 
-        if not_quoted_yet:
+        Parameters:
+            ecn (ECN): ECN to quote.
+            rfq_date (date): Date when Sourcing team send RFQ (Request For Quotation).
+            lead time (int): Lead time for this specific quotation. It can be different to supplier's standard lead time. It is 0 by default.
+
+        Returns:
+            DataFrame: Quotation in Pandas' DataFrame format.
+        """
+        not_quoted_yet = True   # Indicator of quotation status for the ECN. Its initial status is True.
+        for quotation in self.quotations:
+            if quotation.ecn.ecn_id == ecn.ecn_id:  # Check is the supplier already quoted this ECN, if it already quoted it
+                print(f"{self.name} already quoted {ecn.ecn_id}.")  # Prints a warning if the supplier already quoted the ECN.
+                not_quoted_yet = False  # If supplier already quoted the ECN changes status to False.
+
+        if not_quoted_yet:  # In case the supplier did not quoted it:
             min_price = self.price_complexity_map["minimum"]
 
             quotation_time = max(round(np.random.normal(self.µ_quotation_time, self.σ_quotation_time)), self.minimum_quotation_time)
@@ -464,7 +486,7 @@ class Supplier:
                 else:
                     lt = self.standard_lead_time
 
-                quotation.df.loc[len(quotation.df)] = [
+                quotation.df.loc[len(quotation.df)] = [ # Adds the part number data to the quotation DataFrame.
                     ecn.project.name,
                     ecn.ecn_id,
                     ecn.ecn_date,
@@ -486,12 +508,39 @@ class Supplier:
                     False
                 ]
 
-            self.quotations.append(quotation)
+            self.quotations.append(quotation)   # Append the quotation's DataFrame to quotation's list.
             return quotation.df
 
 
 class Environment:
+    """
+    Represents the environment were the NPI project takes place and objects interact.
+
+    Attributes
+    ----------
+    suppliers : list[Supplier]
+        List of all the created suppliers in the environment.
+    active_suppliers : list[Supplier]
+        List of active suppliers for quotation.
+    inactive_suppliers : list[Supplier]
+        List of inactive suppliers. RFQs will not be send to these suppliers.
+    ecns : list[ECN]
+        List of created ECNs.
+    item_master : DataFrame
+        Master DataFrame of created PartNumber. This record all the information related to a part number and their interaction with the suppliers.
+    part_kinds : dict[str: dict [str: float | dict[str: float] | list[PartNumber]]]
+        There are seven kind of copper tubing; this dictionary contains the mean, standard deviation, price profile parameters according the technical complexity, and a list of created part numbers for each kind.
+    environment_times : dict[str: int | tuple[float]]
+        These dictionary provides the statistical parameters (mean and standard deviation) for each activity in the NPI Sourcing process.
+    µ_eau_qty : float
+        Average estimated anual usage (EAU) for the part numbers in the ECN for a low-volume plant.
+    σ_eau_qty : float
+        Standard deviation for EAU for the part numbers in the ECN for a low-volume plant.
+    min_eau_qty : int
+        Minimum EAU quantity.
+    """
     def __init__(self):
+        """Initializes the Environment object."""
         self.suppliers = []
         self.active_suppliers = []
         self.inactive_suppliers = []
@@ -561,24 +610,52 @@ class Environment:
         self.min_eau_qty = 23
 
     def add_supplier(self, supplier: Supplier):
-        self.suppliers.append(supplier)
-        self.active_suppliers.append(supplier)
+        """
+        Add a supplier to the Environment.
+
+        Parameters:
+            supplier (Supplier): Supplier to add.
+        """
+        self.suppliers.append(supplier) # Append Supplier to Environment's supplier list.
+        self.active_suppliers.append(supplier)  # Activate supplier for RFQs.
 
     def add_suppliers(self, suppliers: list[Supplier]):
+        """
+        Add the suppliers in a list to the Environment.
+
+        Parameters:
+            suppliers (list[Supplier]): List of suppliers to add.
+        """
         for supplier in suppliers:
             self.add_supplier(supplier)
 
     def activate_supplier(self, supplier: Supplier):
-        if supplier in self.active_suppliers:
-            print(f"{supplier.name} is already active.")
+        """
+        Enable a Supplier to quote ECNs.
+
+        Parameters:
+            supplier (Supplier): Supplier to activate.
+        """
+        if supplier in self.active_suppliers:   # Verify if supplier is already active.
+            print(f"{supplier.name} is already active.")    # If they are active, print a warning.
         else:
-            self.active_suppliers.append(supplier)
-            self.inactive_suppliers.remove(supplier)
+            self.active_suppliers.append(supplier)  # Add Supplier to active_suppliers list.
+            self.inactive_suppliers.remove(supplier)    # Remove Supplier from inactive_Suppliers list.
 
     def create_supplier(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular", active: bool = True):
+        """
+        Create a new supplier. This method calls Supplier object.
+
+        Parameters:
+            delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            quotation_profile (str): It determines the quotation time. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            price_profile (str): It determines the prices. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            punctuality_profile (str): It determines the punctuality of supplier for sample delivery. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            active (bool): True to create an active Supplier; False to create an inactive Supplier.
+        """
         for supplier in self.suppliers:
-            if supplier.name == name:
-                raise Exception(f"Supplier {name} already exists. Its ID is {supplier.id}.")
+            if supplier.name == name:                                                           # Print a warning if there is already a supplier
+                raise Exception(f"Supplier {name} already exists. Its ID is {supplier.id}.")    # with the same number.
 
         supplier = Supplier(name, delivery_profile, quotation_profile, price_profile, punctuality_profile)
         self.add_supplier(supplier)
@@ -587,29 +664,45 @@ class Environment:
             self.deactivate_supplier(supplier)
 
     def deactivate_supplier(self, supplier: Supplier):
+        """
+        Disables a Supplier to quote ECNs.
+
+        Parameters:
+            supplier (Supplier): Supplier to deactivate.
+        """
         self.inactive_suppliers.append(supplier)
         self.active_suppliers.remove(supplier)
 
     def gen_ecns(self, project: Project, qty: int):
-        ecns = []
+        """
+        Generate a specific quantity of ECNs for an specific Project. The quantity of part numbers for every ECN is generated randomly.
+
+        Parameters:
+            project (Project): Project to generate the ECNs.
+            qty (int): Quantity of ECNs to generate.
+
+        Returns:
+            list: A list containing the ECNs for the Project.
+        """
+        ecns = []   # List to store the created ECNs.
 
         for i in range(qty):
-            ecn_part_numbers = []
+            ecn_part_numbers = []   # List to store the created part numbers of the ECN,
             ecn_eau = max(round(np.random.normal(loc=self.μ_eau_qty, scale=self.σ_eau_qty)), self.min_eau_qty)
 
-            while len(ecn_part_numbers) == 0:
+            while len(ecn_part_numbers) == 0:   # This while ensures that the ECN has at least one part number.
                 for key in self.part_kinds.keys():
                     kind_complexity_keys = list(self.part_kinds[key]["complexity"].keys())
                     kind_complexity_probabilities = list(self.part_kinds[key]["complexity"].values())
 
-                for j in range(max(int(np.random.normal(self.part_kinds[key]["average"], self.part_kinds[key]["stdev"])), 0)):
-                    category_part_number = len(self.part_kinds[key]["parts"]) + 1
-                    complexity = np.random.choice(kind_complexity_keys, p=kind_complexity_probabilities)
+                    for j in range(max(int(np.random.normal(self.part_kinds[key]["average"], self.part_kinds[key]["stdev"])), 0)):
+                        category_part_number = len(self.part_kinds[key]["parts"]) + 1
+                        complexity = np.random.choice(kind_complexity_keys, p=kind_complexity_probabilities)
 
-                    part_number = Part_Number(pn=f"A0{key}{str(category_part_number).zfill(6)}", complexity=complexity, eau=ecn_eau)
+                        part_number = Part_Number(pn=f"A0{key}{str(category_part_number).zfill(6)}", complexity=complexity, eau=ecn_eau)
 
-                    self.part_kinds[key]["parts"].append(part_number)
-                    ecn_part_numbers.append(part_number)
+                        self.part_kinds[key]["parts"].append(part_number)
+                        ecn_part_numbers.append(part_number)
 
             µ_ecn_release_time, σ_ecn_release_time = self.environment_times["release_ecn"]
             ecn_date = project.important_dates["Design freeze"] + timedelta(days=min(max(round(np.random.normal(loc=µ_ecn_release_time, scale=σ_ecn_release_time)), -160), 436))
@@ -622,11 +715,30 @@ class Environment:
         return ecns
 
     def get_ecn(self, search_reference: str):
+        """
+        Search a ECN in the ecn list by ID and return it.
+
+        Parameters:
+            search_reference (str): ECN ID to search.
+        
+        Returns:
+            ECN: ECN object.
+        """
         for ecn in self.ecns:
             if ecn.ecn_id == search_reference:
                 return ecn
 
-    def get_supplier(self, search_mode: str, reference: str) -> Supplier:
+    def get_supplier(self, search_mode: str, reference: str):
+        """
+        Search a supplier in the supplier list by a reference and return them.
+
+        Parameters:
+            search_mode (str): Search term. Valid options are 'name' and 'id'. Use 'name to search a supplier by their name; use 'id' to search them by their ID.
+            reference (str): Supplier name or ID.
+        
+        Returns:
+            Supplier: Supplier object.
+        """
         for supplier in self.suppliers:
             match search_mode:
                 case "name":
@@ -639,6 +751,16 @@ class Environment:
                         return supplier
 
     def import_ecns_from_df(self, project: Project, df: pd.DataFrame):
+        """
+        Import ECNs and part numbers from a DataFrame. This method is useful when you want to recreate a simulation using the same part numbers as in a past session. The DataFrame must contain these columns: 'Project', 'ECN', ECN release', 'Part number', 'Complexity', and 'EAU'.
+
+        Parameters:
+            project (Project): Object representing a project to store this ECNs.
+            df (DataFrame): DataFrame containing the information regarding the ECNs and part numbers to import.
+
+        Returns:
+            list: List containing the ECNs.
+        """
         ecns = []
         for ecn in df["ECN"].unique():
             ecn_part_numbers = []
@@ -662,6 +784,12 @@ class Environment:
         return ecns
 
     def import_training_df(self, training_df: pd.DataFrame):
+        """
+        Import a dataset containing the historical information or a training dataset generated by the simulation. For more information about the required columns, please take as reference the attribute 'columns' of Item_Master.
+
+        Parameters:
+            training_df (DataFrame): DataFrame containing the historical o training dataset.
+        """
         self.item_master = training_df
 
         project_names = training_df["Project"].unique()
@@ -697,10 +825,19 @@ class Environment:
             ecn_project.ecns.append(ecn)
 
     def quote_all_ecn_project_all_suppliers(self, project: Project):
+        """
+        Send a RFQ for all the ECNs of a specific project to all the active suppliers.
+
+        Parameters:
+            project (Project): Project to quote.
+        """
         for ecn in project.ecns:
             self.quote_ecn_all_suppliers(ecn)
 
     def quote_ecn_all_suppliers(self, ecn: ECN):
+        """
+        Send a RFQ for a specific ECN to all the active suppliers.
+        """
         µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
         ecn.status = "Engineering release"
 
@@ -713,6 +850,13 @@ class Environment:
         return self.item_master[self.item_master["ECN"] == ecn.ecn_id]
 
     def quote_ecn_some_suppliers(self, ecn: ECN, quoting_suppliers: list[Supplier]):
+        """
+        Send RFQ for a specific ECN to all the suppliers in a list.
+
+        Parameters:
+            ecn (ECN): ECN to quote.
+            quoting_suppliers (list[Supplier]): List containing the suppliers to send RFQ.
+        """
         µ_rfq_time, σ_rfq_time = self.environment_times["send_rfq"]
         ecn.status = "Engineering release"
 
@@ -728,6 +872,17 @@ class Environment:
                 print(f"{supplier.name} is inactive.")
 
     def implement_ecn(self, ecn: ECN, awarded_supplier: Supplier, overwrite: bool = False):
+        """
+        Implement all the part numbers in a ECN with a chosen supplier.
+
+        Parameters:
+            ecn (ECN): ECN to implement.
+            awarded_supplier (Supplier): Supplie to implement the ECN with.
+            overwrite (bool): If True, the ECN will be implemented overwriting the existing values for the attributes in the related objects; this is useful when simulating the implementation with two or more iterations. It is False by default.
+
+        Returns:
+            DataFrame: DataFrame containing the information of implement ECN.
+        """
         if not overwrite:
             for supplier in self.suppliers:
                 if supplier != awarded_supplier:
