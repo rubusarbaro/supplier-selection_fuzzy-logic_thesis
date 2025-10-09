@@ -1,5 +1,7 @@
 # 🧠 NPI Supplier Selection Fuzzy Logic Simulation
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/rubusarbaro/supplier-selection_fuzzy-logic_thesis)
+
 ---
 
 ## 📘 Descripción general
