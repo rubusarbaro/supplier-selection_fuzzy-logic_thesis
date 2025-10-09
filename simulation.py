@@ -1002,19 +1002,36 @@ class Environment:
         return self.item_master[(self.item_master["ECN"] == ecn.ecn_id) & (self.item_master["Supplier ID"] == awarded_supplier.id)]
 
     def quote_all_ecns(self):
+        """
+        Send RFQ for all the ECNs of all the projects to all the active suppliers.
+
+        Returns:
+            DataFrame: DataFrame containing the quoted ECNs.
+        """
         for ecn in self.ecns:
             self.quote_ecn_all_suppliers(ecn)
         return self.item_master
 
     def gen_initial_item_master_df(self):
+        """
+        Implement the ECNs with random supplier to generate an initial dataset. Supplier selection is done using a uniform random distribution.
+
+        Returns:
+            DataFrame: Item master.
+        """
         for ecn in self.ecns:
             random_supplier = choice(self.suppliers)
 
             self.implement_ecn(ecn, random_supplier)
-
         return self.item_master
 
     def gen_initial_item_master_df_project(self, project: Project):
+        """
+        Implement the ECNs with random supplier to generate an initial dataset for an specific project. Supplier selection is done using a uniform random distribution.
+
+        Returns:
+            DataFrame: Item master.
+        """
         for ecn in project.ecns:
             random_supplier = choice(self.suppliers)
 
@@ -1023,6 +1040,12 @@ class Environment:
         return self.item_master
 
     def get_µσ_punctuality(self):
+        """
+        Calculate the statististical parameters (mean and standard deviation) for sample delivery time of awarded part numbers.
+
+        Returns:
+            tupple: (mean, standard deviation)
+        """
         punctuality_list = []
 
         for supplier_id in self.item_master[(self.item_master["Awarded"] == True)]["Supplier ID"].unique():
@@ -1034,6 +1057,9 @@ class Environment:
 
 
 class Fuzzy_Model:
+    """
+    Fuzzy logic model to evaluate suppliers on NPI projects.
+    """
     def __init__(self, df_item_master: pd.DataFrame, ref_supplier: Supplier, quotation_ecn: ECN, new_suppliers: bool = False, imported_data: bool = False):
         self.df = df_item_master
         self.new_suppliers = new_suppliers
