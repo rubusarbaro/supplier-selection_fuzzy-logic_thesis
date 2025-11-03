@@ -1,0 +1,106 @@
+evaluation_supplier_id = "10000033"
+
+crisp_delivery_time = env.item_master[(env.item_master["Supplier ID"] == evaluation_supplier_id) & (env.item_master["Awarded"] == True)]["Delivery time"].mean()
+crisp_price = env.item_master[(env.item_master["Project"] == "Juneau") & (env.item_master["Supplier ID"] == evaluation_supplier_id)]["FY Spend"].sum()
+#crisp_price = env.item_master[(env.item_master["Project"] == "Juneau") & (env.item_master["Supplier ID"] == evaluation_supplier_id) & env.item_master["ECN"].isin(analyse_ecns)]["FY Spend"].sum()
+try:
+    crisp_punctuality = len(env.item_master[(env.item_master["Supplier ID"] == evaluation_supplier_id) & (env.item_master["Awarded"] == True) & (env.item_master["OTD"] == True)]) / len(env.item_master[(env.item_master["Supplier ID"] == evaluation_supplier_id) & (env.item_master["Awarded"] == True)])
+    new_supplier = False
+except:
+    new_supplier = True
+    crisp_delivery_time = env.item_master[(env.item_master["Supplier ID"] == evaluation_supplier_id) & (env.item_master["ECN"].isin(juneau.ecns))]["Lead time"].mean()
+
+# Assign membership degree
+price_level_low = fuzzy.interp_membership(var_price, price_low, crisp_price)
+price_level_medium = fuzzy.interp_membership(var_price, price_medium, crisp_price)
+price_level_high = fuzzy.interp_membership(var_price, price_high, crisp_price)
+
+if not new_supplier:
+    punctuality_level_low = fuzzy.interp_membership(var_punctuality, punctuality_low, crisp_punctuality)
+    punctuality_level_medium = fuzzy.interp_membership(var_punctuality, punctuality_medium, crisp_punctuality)
+    punctuality_level_high = fuzzy.interp_membership(var_punctuality, punctuality_high, crisp_punctuality)
+
+delivery_time_level_low = fuzzy.interp_membership(var_delivery_time, delivery_time_low, crisp_delivery_time)
+delivery_time_level_medium = fuzzy.interp_membership(var_delivery_time, delivery_time_medium, crisp_delivery_time)
+delivery_time_level_high = fuzzy.interp_membership(var_delivery_time, delivery_time_high, crisp_delivery_time)
+
+# Rule application
+# Example code uses np.fmax for OR operator. I will use np.fmin for AND.
+if new_supplier:
+    rule_1 = min(max(price_level_low, price_level_medium), delivery_time_level_low) # High
+
+    rule_2 = min(max(price_level_low, price_level_medium), delivery_time_level_medium) # Regular
+
+    rule_3 = min(max(price_level_low, price_level_medium), delivery_time_level_high) # Low
+
+    rule_4 = price_level_high # Low
+
+    low_strength = max(rule_3, rule_4)
+    medium_strength = rule_2
+    high_strength = rule_1
+else:
+    rule_1 = min(delivery_time_level_low, max(price_level_low, price_level_medium), punctuality_level_low)  # Regular
+
+    rule_2 = min(delivery_time_level_low, max(price_level_low, price_level_medium), max(punctuality_level_medium, punctuality_level_high))  # High
+
+    rule_3 = min(delivery_time_level_low, price_level_high, punctuality_level_low)  # Low
+
+    rule_4 = min(delivery_time_level_low, price_level_high, max(punctuality_level_medium, punctuality_level_high))  # Regular
+
+    rule_5 = min(delivery_time_level_medium, price_level_low, punctuality_level_low)    # Regular
+
+    rule_6 = min(max(delivery_time_level_medium, delivery_time_level_high), max(price_level_low, price_level_medium), punctuality_level_medium) # Regular
+
+    rule_7 = min(max(delivery_time_level_medium, delivery_time_level_high), max(price_level_low, price_level_medium), punctuality_level_high)   # High
+    #rule_7 = min(delivery_time_level_medium, max(price_level_low, price_level_medium), punctuality_level_high)   # High
+
+    rule_8 = min(delivery_time_level_medium, max(price_level_medium, price_level_high), punctuality_level_low)  # Low
+
+    rule_9 = min(max(delivery_time_level_medium, delivery_time_level_high), price_level_high, punctuality_level_medium) # Low
+
+    rule_10 = min(max(delivery_time_level_medium, delivery_time_level_high), price_level_high, punctuality_level_high)  # Medium
+
+    rule_11 = min(delivery_time_level_high, punctuality_level_low)    # Low
+
+    low_strength = max(rule_3, rule_8, rule_9, rule_11)
+    medium_strength = max(rule_1, rule_4, rule_5, rule_6, rule_10)
+    high_strength = max(rule_2, rule_7)
+
+supplier_activation_low = np.fmin(low_strength, supplier_low)
+supplier_activation_medium = np.fmin(medium_strength, supplier_medium)
+supplier_activation_high = np.fmin(high_strength, supplier_high)
+
+supplier_0 = np.zeros_like(var_supplier)
+
+aggregated = np.fmax.reduce([supplier_activation_low, supplier_activation_medium, supplier_activation_high])
+
+
+# Defuzzification
+supplier_score = fuzzy.defuzz(var_supplier, aggregated, "centroid")
+supplier_activation = fuzzy.interp_membership(var_supplier, aggregated, supplier_score)
+
+fig, (ax5, ax6) = plt.subplots(nrows=2, figsize=(8, 9))
+
+ax5.fill_between(var_supplier, supplier_0, supplier_activation_low, facecolor="b", alpha=0.7)
+ax5.plot(var_supplier, supplier_low, "b", linewidth=0.5, linestyle="--")
+ax5.fill_between(var_supplier, supplier_0, supplier_activation_medium, facecolor="g", alpha=0.7)
+ax5.plot(var_supplier, supplier_medium, "g", linewidth=0.5, linestyle="--")
+ax5.fill_between(var_supplier, supplier_0, supplier_activation_high, facecolor="r", alpha=0.7)
+ax5.plot(var_supplier, supplier_high, "r", linewidth=0.5, linestyle="--")
+ax5.set_title("Output membership")
+
+ax6.plot(var_supplier, supplier_low, "b", linewidth=0.5, linestyle="--")
+ax6.plot(var_supplier, supplier_medium, "g", linewidth=0.5, linestyle="--")
+ax6.plot(var_supplier, supplier_high, "r", linewidth=0.5, linestyle="--")
+ax6.fill_between(var_supplier, supplier_0, aggregated, facecolor="Orange", alpha=0.7)
+ax6.plot([supplier_score, supplier_score], [0, supplier_activation], "k", linewidth=1.5, alpha=0.9)
+ax6.set_title("Aggregated membership and supplier score (line)")
+
+for ax in [ax5, ax6]:
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+plt.tight_layout()
+plt.show()
