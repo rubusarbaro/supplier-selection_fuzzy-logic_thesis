@@ -20,7 +20,8 @@
 ###                                                                         ###
 ###############################################################################
 """
-This module provides the required clases to simulate the Sourcing NPI process. It is intended to simulate a basic process of sourcing in a new product introduction (NPI) project.
+This module provides the required clases to simulate the Sourcing NPI process. It is intended to simulate a basic
+process of sourcing in a new product introduction (NPI) project.
 
 Classes
 -------
@@ -44,6 +45,9 @@ Supplier
 
 ## Depency modules
 from datetime import date, timedelta    # To work dates.
+from logging import exception
+from unittest import case
+
 from dotenv import load_dotenv  # variables.
 from math import ceil, floor
 from os import getenv
@@ -84,9 +88,12 @@ class Project:
 
         Parameters:
             name (str): Name of NPI project.
-            df_date (date): Date of design freeze. Design freeze is the date when non-critical changes to the project cease. ECNs are released near this date.
-            mcs_date (date): Date of MCS. Samples need to arrive before this date, but they do not need to be PPAP approved.
-            pilot_date (date): Date of pilot. Building pilot units. Material need to be PPAP approved and in SAP contract before this date; procurement is made by regular purchasing process.
+            df_date (date): Date of design freeze. Design freeze is the date when non-critical changes to the project
+                            cease. ECNs are released near this date.
+            mcs_date (date): Date of MCS. Samples need to arrive before this date, but they do not need to be PPAP
+                             approved.
+            pilot_date (date): Date of pilot. Building pilot units. Material need to be PPAP approved and in SAP
+                               contract before this date; procurement is made by regular purchasing process.
             sop_date (date): Date of start of production. Implementation of NPI project.
         """
         self.name = name
@@ -183,7 +190,8 @@ class Part_Number:
         Parameters:
             pn (str): Unique part number for the material.
             complexity (str): Complexity of the material. Valid options are 'low', 'medium', 'high'.
-            eau (int): Estimated Annual Use, is the quantity of the material that is intended to consume during the fiscal year.
+            eau (int): Estimated Annual Use, is the quantity of the material that is intended to consume during the
+                       fiscal year.
         """
         self.pn = pn
         self.complexity = complexity
@@ -218,7 +226,8 @@ class ECN:
     Methods
     -------
     display_as_df():
-        Returns a DataFrame containing the columns 'Project', 'ECN', 'ECN release', 'Part number', 'Complexity', 'EAU', and its values.
+        Returns a DataFrame containing the columns 'Project', 'ECN', 'ECN release', 'Part number', 'Complexity', 'EAU',
+        and its values.
     """
     instances = 0
 
@@ -381,20 +390,34 @@ class Supplier:
       "high": (1.2, 1.1)
     }
 
-    def __init__(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular", standard_lt: int = 0):
+    def __init__(
+            self,
+            name: str,
+            delivery_profile: str = "regular",
+            quotation_profile: str = "regular",
+            price_profile: str = "regular",
+            punctuality_profile: str = "regular",
+            standard_lt: int = 0
+    ):
         """
         Initializes the supplier object.
 
         Parameters:
             name (str): Supplier name.
-            delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            quotation_profile (str): It determines the quotation time. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            price_profile (str): It determines the prices. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            punctuality_profile (str): It determines the punctuality of supplier for sample delivery. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            standard_lt (int): This is the lead time in days that the supplier usually writes in their quotation, however in real life this time usually is not met. It is 0 by default.
+            delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'.
+                                    Default is 'regular'.
+            quotation_profile (str): It determines the quotation time. Valid options are: 'low', 'regular', and 'high'.
+                                     Default is 'regular'.
+            price_profile (str): It determines the prices. Valid options are: 'low', 'regular', and 'high'. Default is
+                                 'regular'.
+            punctuality_profile (str): It determines the punctuality of supplier for sample delivery. Valid options are:
+                                       'low', 'regular', and 'high'. Default is 'regular'.
+            standard_lt (int): This is the lead time in days that the supplier usually writes in their quotation,
+                               however in real life this time usually is not met. It is 0 by default.
         """
         Supplier.instances += 1
-        self.id = f"1{str(Supplier.instances).zfill(7)}"    # Supplier ID is automatically calculated according to the current quantity of created suppliers.
+        self.id = f"1{str(Supplier.instances).zfill(7)}"    # Supplier ID is automatically calculated according to the
+                                                            # current quantity of created suppliers.
         self.name = name
         self.quotations = []
         self.awarded_ecns = []
@@ -454,7 +477,8 @@ class Supplier:
         Parameters:
             ecn (ECN): ECN to quote.
             rfq_date (date): Date when Sourcing team send RFQ (Request For Quotation).
-            lead time (int): Lead time for this specific quotation. It can be different to supplier's standard lead time. It is 0 by default.
+            lead time (int): Lead time for this specific quotation. It can be different to supplier's standard lead
+                             time. It is 0 by default.
 
         Returns:
             DataFrame: Quotation in Pandas' DataFrame format.
@@ -527,11 +551,14 @@ class Environment:
     ecns : list[ECN]
         List of created ECNs.
     item_master : DataFrame
-        Master DataFrame of created PartNumber. This record all the information related to a part number and their interaction with the suppliers.
+        Master DataFrame of created PartNumber. This record all the information related to a part number and their
+        interaction with the suppliers.
     part_kinds : dict[str: dict [str: float | dict[str: float] | list[PartNumber]]]
-        There are seven kind of copper tubing; this dictionary contains the mean, standard deviation, price profile parameters according the technical complexity, and a list of created part numbers for each kind.
+        There are seven kind of copper tubing; this dictionary contains the mean, standard deviation, price profile
+        parameters according the technical complexity, and a list of created part numbers for each kind.
     environment_times : dict[str: int | tuple[float]]
-        These dictionary provides the statistical parameters (mean and standard deviation) for each activity in the NPI Sourcing process.
+        These dictionary provides the statistical parameters (mean and standard deviation) for each activity in the NPI
+        Sourcing process.
     µ_eau_qty : float
         Average estimated anual usage (EAU) for the part numbers in the ECN for a low-volume plant.
     σ_eau_qty : float
@@ -647,15 +674,21 @@ class Environment:
         Create a new supplier. This method calls Supplier object.
 
         Parameters:
-            delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            quotation_profile (str): It determines the quotation time. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            price_profile (str): It determines the prices. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
-            punctuality_profile (str): It determines the punctuality of supplier for sample delivery. Valid options are: 'low', 'regular', and 'high'. Default is 'regular'.
+            delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'.
+                                    Default is 'regular'.
+            quotation_profile (str): It determines the quotation time. Valid options are: 'low', 'regular', and 'high'.
+                                     Default is 'regular'.
+            price_profile (str): It determines the prices. Valid options are: 'low', 'regular', and 'high'. Default is
+                                 'regular'.
+            punctuality_profile (str): It determines the punctuality of supplier for sample delivery. Valid options are:
+                                       'low', 'regular', and 'high'. Default is 'regular'.
             active (bool): True to create an active Supplier; False to create an inactive Supplier.
         """
         for supplier in self.suppliers:
-            if supplier.name == name:                                                           # Print a warning if there is already a supplier
-                raise Exception(f"Supplier {name} already exists. Its ID is {supplier.id}.")    # with the same number.
+            if supplier.name == name:                                                           # Print a warning if
+                raise Exception(f"Supplier {name} already exists. Its ID is {supplier.id}.")    # there is already a
+                                                                                                # supplier with the same
+                                                                                                # number.
 
         supplier = Supplier(name, delivery_profile, quotation_profile, price_profile, punctuality_profile)
         self.add_supplier(supplier)
@@ -675,7 +708,8 @@ class Environment:
 
     def gen_ecns(self, project: Project, qty: int):
         """
-        Generate a specific quantity of ECNs for an specific Project. The quantity of part numbers for every ECN is generated randomly.
+        Generate a specific quantity of ECNs for an specific Project. The quantity of part numbers for every ECN is
+        generated randomly.
 
         Parameters:
             project (Project): Project to generate the ECNs.
@@ -695,11 +729,13 @@ class Environment:
                     kind_complexity_keys = list(self.part_kinds[key]["complexity"].keys())
                     kind_complexity_probabilities = list(self.part_kinds[key]["complexity"].values())
 
-                    for j in range(max(int(np.random.normal(self.part_kinds[key]["average"], self.part_kinds[key]["stdev"])), 0)):
+                    for j in range(max(int(np.random.normal(self.part_kinds[key]["average"],
+                                                            self.part_kinds[key]["stdev"])), 0)):
                         category_part_number = len(self.part_kinds[key]["parts"]) + 1
                         complexity = np.random.choice(kind_complexity_keys, p=kind_complexity_probabilities)
 
-                        part_number = Part_Number(pn=f"A0{key}{str(category_part_number).zfill(6)}", complexity=complexity, eau=ecn_eau)
+                        part_number = Part_Number(pn=f"A0{key}{str(category_part_number).zfill(6)}",
+                                                  complexity=complexity, eau=ecn_eau)
 
                         self.part_kinds[key]["parts"].append(part_number)
                         ecn_part_numbers.append(part_number)
@@ -733,7 +769,8 @@ class Environment:
         Search a supplier in the supplier list by a reference and return them.
 
         Parameters:
-            search_mode (str): Search term. Valid options are 'name' and 'id'. Use 'name to search a supplier by their name; use 'id' to search them by their ID.
+            search_mode (str): Search term. Valid options are 'name' and 'id'. Use 'name to search a supplier by their
+                               name; use 'id' to search them by their ID.
             reference (str): Supplier name or ID.
         
         Returns:
@@ -752,7 +789,9 @@ class Environment:
 
     def import_ecns_from_df(self, project: Project, df: pd.DataFrame):
         """
-        Import ECNs and part numbers from a DataFrame. This method is useful when you want to recreate a simulation using the same part numbers as in a past session. The DataFrame must contain these columns: 'Project', 'ECN', ECN release', 'Part number', 'Complexity', and 'EAU'.
+        Import ECNs and part numbers from a DataFrame. This method is useful when you want to recreate a simulation
+        using the same part numbers as in a past session. The DataFrame must contain these columns: 'Project', 'ECN',
+        ECN release', 'Part number', 'Complexity', and 'EAU'.
 
         Parameters:
             project (Project): Object representing a project to store this ECNs.
@@ -771,7 +810,8 @@ class Environment:
                 complexity = df[df["Part number"] == pn]["Complexity"].item()
                 eau = df[df["Part number"] == pn]["EAU"].item()
 
-                part_number = Part_Number(pn=f"A0{pn[2]}{str(category_part_number).zfill(6)}", complexity=complexity, eau=eau)
+                part_number = Part_Number(pn=f"A0{pn[2]}{str(category_part_number).zfill(6)}", complexity=complexity,
+                                          eau=eau)
 
                 self.part_kinds[pn[2]]["parts"].append(part_number)
                 ecn_part_numbers.append(part_number)
@@ -785,7 +825,8 @@ class Environment:
 
     def import_training_df(self, training_df: pd.DataFrame):
         """
-        Import a dataset containing the historical information or a training dataset generated by the simulation. For more information about the required columns, please take as reference the attribute 'columns' of Item_Master.
+        Import a dataset containing the historical information or a training dataset generated by the simulation. For
+        more information about the required columns, please take as reference the attribute 'columns' of Item_Master.
 
         Parameters:
             training_df (DataFrame): DataFrame containing the historical o training dataset.
@@ -795,7 +836,13 @@ class Environment:
         project_names = training_df["Project"].unique()
         project_data = {}
         for project_name in project_names:
-            project_data[project_name] = Project(project_name, date(2025,9,18), date(2025,9,18), date(2025,9,18), date(2025,9,18))
+            project_data[project_name] = Project(
+                project_name,
+                date(2025,9,18),
+                date(2025,9,18),
+                date(2025,9,18),
+                date(2025,9,18)
+            )
 
         ecn_list = training_df["ECN"].unique()
         ecn_part_list = {}
@@ -862,7 +909,8 @@ class Environment:
 
         for supplier in quoting_suppliers:
             if supplier in self.active_suppliers:
-                rfq_date = ecn.ecn_date + timedelta(days=max(round(np.random.normal(loc=µ_rfq_time, scale=σ_rfq_time)), 0))
+                rfq_date = ecn.ecn_date + timedelta(days=max(round(np.random.normal(loc=µ_rfq_time, scale=σ_rfq_time)),
+                                                             0))
 
                 quotation = supplier.quote(ecn, rfq_date)
                 self.item_master = pd.concat([self.item_master, quotation], ignore_index=True)
@@ -878,7 +926,9 @@ class Environment:
         Parameters:
             ecn (ECN): ECN to implement.
             awarded_supplier (Supplier): Supplie to implement the ECN with.
-            overwrite (bool): If True, the ECN will be implemented overwriting the existing values for the attributes in the related objects; this is useful when simulating the implementation with two or more iterations. It is False by default.
+            overwrite (bool): If True, the ECN will be implemented overwriting the existing values for the attributes in
+                              the related objects; this is useful when simulating the implementation with two or more
+                              iterations. It is False by default.
 
         Returns:
             DataFrame: DataFrame containing the information of implement ECN.
@@ -916,7 +966,8 @@ class Environment:
         µ_req_time, σ_req_time = self.environment_times["create_req"]
         µ_po_time, σ_po_time = self.environment_times["send_po"]
         µ_delivery_time, σ_delivery_time = (awarded_supplier.μ_delivery_time, awarded_supplier.σ_delivery_time)
-        µ_documents_time, σ_documents_time = (awarded_supplier.μ_isir_documents_upload, awarded_supplier.σ_isir_documents_upload)
+        µ_documents_time, σ_documents_time = (awarded_supplier.μ_isir_documents_upload,
+                                              awarded_supplier.σ_isir_documents_upload)
         µ_isir_time, σ_isir_time = self.environment_times["approve_isir"]
         µ_ppap_time, σ_ppap_time = self.environment_times["approve_ppap"]
         µ_contract_time, σ_contract_time = self.environment_times["upload_contract"]
@@ -1014,7 +1065,8 @@ class Environment:
 
     def gen_initial_item_master_df(self):
         """
-        Implement the ECNs with random supplier to generate an initial dataset. Supplier selection is done using a uniform random distribution.
+        Implement the ECNs with random supplier to generate an initial dataset. Supplier selection is done using a
+        uniform random distribution.
 
         Returns:
             DataFrame: Item master.
@@ -1027,7 +1079,8 @@ class Environment:
 
     def gen_initial_item_master_df_project(self, project: Project):
         """
-        Implement the ECNs with random supplier to generate an initial dataset for an specific project. Supplier selection is done using a uniform random distribution.
+        Implement the ECNs with random supplier to generate an initial dataset for an specific project. Supplier
+        selection is done using a uniform random distribution.
 
         Returns:
             DataFrame: Item master.
@@ -1041,7 +1094,8 @@ class Environment:
 
     def get_µσ_punctuality(self):
         """
-        Calculate the statististical parameters (mean and standard deviation) for sample delivery time of awarded part numbers.
+        Calculate the statististical parameters (mean and standard deviation) for sample delivery time of awarded part
+        numbers.
 
         Returns:
             tupple: (mean, standard deviation)
@@ -1060,25 +1114,50 @@ class Fuzzy_Model:
     """
     Fuzzy logic model to evaluate suppliers on NPI projects.
     """
-    def __init__(self, df_item_master: pd.DataFrame, ref_supplier: Supplier, quotation_ecn: ECN, new_suppliers: bool = False, imported_data: bool = False):
+    def __init__(
+            self,
+            df_item_master: pd.DataFrame,
+            ref_supplier: Supplier,
+            quotation_ecn: ECN,
+            evaluation_priority: str,   # Options are: "time" and "spend"
+            massive_simulation: bool = False,
+            new_supplier: bool = False,
+    ):
         self.df = df_item_master
-        self.new_suppliers = new_suppliers
+        self.new_supplier = new_supplier
         self.__completely_new_supplier = False
-        self.working_imported_data = imported_data
         self.evaluating_supplier_id = ref_supplier.id
+        self.evaluation_priority = evaluation_priority
 
-        quoted_pn = self.df[self.df["Supplier ID"] == self.evaluating_supplier_id]["Part number"]
+        avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()  # Igual en ambos casos
+        std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()  # Igual en ambos casos
 
-        avg_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].mean()
-        std_delivery_time = self.df[(self.df["Awarded"] == True)]["Delivery time"].std()
-        max_delivery_time = ceil(max(avg_delivery_time + 3*std_delivery_time, self.df[(self.df["Awarded"] == True)]["Delivery time"].max()))
+        match self.evaluation_priority:
+            case "time":
+                quoted_pn = self.df[self.df["Supplier ID"] == self.evaluating_supplier_id]["Part number"]
+                max_delivery_time = ceil(max(avg_delivery_time + 3 * std_delivery_time,self.df[(self.df["Awarded"] == True)]["Delivery time"].max()))
+                quotations_df = self.df[self.df["Part number"].isin(quoted_pn)]
+                self.spend_df = quotations_df[["Supplier ID", "FY Spend"]].groupby("Supplier ID").sum()["FY Spend"]
 
-        quotations_df = self.df[self.df["Part number"].isin(quoted_pn)]
-        self.spend_df = quotations_df[["Supplier ID", "FY Spend"]].groupby("Supplier ID").sum()["FY Spend"]
-        avg_spend = (self.spend_df.mean()) / 100
-        std_spend = (self.spend_df.std()) / 100
-        min_spend = (self.spend_df.min()) / 100
-        max_spend = (ceil(avg_spend + 3*std_spend))
+            case "spend":   # Revisar la obtención del spend, ya que para el objetivo 'spend' debe considerar únicamente lo del proyecto.
+                self.spend_df = self.df[["Supplier ID", "FY Spend"]].groupby("Supplier ID").sum()["FY Spend"]
+                max_delivery_time = ceil(self.df[(self.df["Awarded"] == True)]["Delivery time"].max())
+
+            case _:
+                exception("Evaluation priority must be 'time' or 'spend'.")
+
+        avg_spend = (self.spend_df.mean()) / 100    # Igual en ambos casos
+        std_spend = (self.spend_df.std()) / 100 # Igual en ambos casos
+        min_spend = floor((self.spend_df.min()) / 100) # Igual en ambos casos
+
+        match evaluation_priority:
+            case "time":
+                if massive_simulation:
+                    max_spend = (ceil(avg_spend + 10 * std_spend))
+                else:
+                    max_spend = (ceil(avg_spend + 3 * std_spend))
+            case "spend":
+                max_spend = ceil((self.spend_df.max()) / 100)
 
         if len(self.spend_df) < 2:
             self.__completely_new_supplier = True
@@ -1097,7 +1176,7 @@ class Fuzzy_Model:
         self.delivery_time_medium = fuzzy.trimf(self.var_delivery_time, [avg_delivery_time - std_delivery_time, avg_delivery_time, avg_delivery_time + std_delivery_time])
         self.delivery_time_high = fuzzy.trapmf(self.var_delivery_time, [avg_delivery_time, avg_delivery_time + std_delivery_time, max_delivery_time, max_delivery_time])
 
-        if not new_suppliers:
+        if not new_supplier:
             self.punctuality_low = fuzzy.trapmf(self.var_punctuality, [0, 0, 0.25, 0.5])
             self.punctuality_medium = fuzzy.trimf(self.var_punctuality, [0.25, 0.5, 0.75])
             self.punctuality_high = fuzzy.trapmf(self.var_punctuality, [0.5, 0.75, 1, 1])
@@ -1106,25 +1185,77 @@ class Fuzzy_Model:
         self.spend_medium = fuzzy.trimf(self.var_spend, [avg_spend - std_spend, avg_spend, avg_spend + std_spend])
         self.spend_high = fuzzy.trapmf(self.var_spend, [avg_spend, avg_spend + std_spend, max_spend, max_spend])
 
-        self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
-        self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
+        match evaluation_priority:
+            case "time":
+                self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
+                self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
 
-        if not self.__completely_new_supplier:
-            self.stats = self._evaluate_supplier(supplier=ref_supplier, quotation_ecn=quotation_ecn, updated_df=self.df)
-        else:
-            self.stats = {
-                "Supplier ID": ref_supplier.id,
-                "Score": 0,
-                "Wait": 1,
-                "Implement": 0,
-                "Action": "wait"
-            }
+                if not self.__completely_new_supplier:
+                    self.stats = self._evaluate_supplier_time_priority(quotation_ecn)
+                else:
+                    self.stats = {  # Necesito actualizar este formato para poder integrar uno según el modelo.
+                        "Supplier ID": ref_supplier.id,
+                        "Score": 0,
+                        "Wait": 1,
+                        "Implement": 0,
+                        "Action": "wait"
+                    }
+
+            case "spend":
+                self.supplier_low = fuzzy.trimf(self.var_supplier, [0, 2.5, 5])
+                self.supplier_medium = fuzzy.trimf(self.var_supplier, [2.5, 5, 7.5])
+                self.supplier_high = fuzzy.trimf(self.var_supplier, [5, 7.5, 10])
+
+                self.stats = self._evaluate_supplier_spend_priority()
+            case _:
+                exception("Evaluation priority must be 'time' or 'spend'.")
 
     def get_stats(self):
        return self.stats
 
-    def plot(self):
-        if self.new_suppliers:
+    def plot_model(self):
+        if not self.new_supplier or self.evaluation_priority == "spend":
+            fig, [ax0, ax1, ax2, ax3, ax4] = plt.subplots(nrows=5, figsize=(8, 9))
+
+            ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
+            ax0.plot(self.var_due_time, self.due_time_medium, "b", linewidth=1.5, label="Near")
+            ax0.plot(self.var_due_time, self.due_time_high, "g", linewidth=1.5, label="Far")
+            ax0.set_title("Due time")
+            ax0.legend()
+
+            ax1.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
+            ax1.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
+            ax1.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
+            ax1.set_title("Delivery time")
+            ax1.legend()
+
+            ax2.plot(self.var_spend, self.spend_low, "g", linewidth=1.5, label="Low")
+            ax2.plot(self.var_spend, self.spend_medium, "b", linewidth=1.5, label="Regular")
+            ax2.plot(self.var_spend, self.spend_high, "r", linewidth=1.5, label="High")
+            ax2.set_title("FY Spend")
+            ax2.legend()
+
+            ax3.plot(self.var_punctuality, self.punctuality_low, "r", linewidth=1.5, label="Bad")
+            ax3.plot(self.var_punctuality, self.punctuality_medium, "b", linewidth=1.5, label="Regular")
+            ax3.plot(self.var_punctuality, self.punctuality_high, "g", linewidth=1.5, label="Good")
+            ax3.set_title("Punctuality")
+            ax3.legend()
+
+            ax4.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
+            ax4.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
+            ax4.set_title("Supplier")
+            ax4.legend()
+
+            for ax in [ax0, ax1, ax2, ax3, ax4]:
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+                ax.get_xaxis().tick_bottom()
+                ax.get_yaxis().tick_left()
+
+            plt.tight_layout()
+            plt.show()
+
+        else:
             fig, [ax0, ax1, ax2, ax3] = plt.subplots(nrows=4, figsize=(8, 9))
 
             ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
@@ -1159,53 +1290,9 @@ class Fuzzy_Model:
             plt.tight_layout()
             plt.show()
 
-        else:
-            fig, [ax0, ax1, ax2, ax3, ax4] = plt.subplots(nrows=5, figsize=(8, 9))
-
-            ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
-            ax0.plot(self.var_due_time, self.due_time_medium, "b", linewidth=1.5, label="Near")
-            ax0.plot(self.var_due_time, self.due_time_high, "g", linewidth=1.5, label="Far")
-            ax0.set_title("Due time")
-            ax0.legend()
-
-
-            ax1.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
-            ax1.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
-            ax1.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
-            ax1.set_title("Delivery time")
-            ax1.legend()
-
-            ax2.plot(self.var_spend, self.spend_low, "g", linewidth=1.5, label="Low")
-            ax2.plot(self.var_spend, self.spend_medium, "b", linewidth=1.5, label="Regular")
-            ax2.plot(self.var_spend, self.spend_high, "r", linewidth=1.5, label="High")
-            ax2.set_title("FY Spend")
-            ax2.legend()
-
-            ax3.plot(self.var_punctuality, self.punctuality_low, "r", linewidth=1.5, label="Bad")
-            ax3.plot(self.var_punctuality, self.punctuality_medium, "b", linewidth=1.5, label="Regular")
-            ax3.plot(self.var_punctuality, self.punctuality_high, "g", linewidth=1.5, label="Good")
-            ax3.set_title("Punctuality")
-            ax3.legend()
-
-            ax4.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
-            ax4.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
-            ax4.set_title("Supplier")
-            ax4.legend()
-
-            for ax in [ax0, ax1, ax2, ax3, ax4]:
-                ax.spines["top"].set_visible(False)
-                ax.spines["right"].set_visible(False)
-                ax.get_xaxis().tick_bottom()
-                ax.get_yaxis().tick_left()
-
-            plt.tight_layout()
-            plt.show()
-
-    def _evaluate_supplier(self, supplier: Supplier, quotation_ecn: ECN, updated_df: pd.DataFrame):
-        self.df = updated_df
-
+    def _evaluate_supplier_time_priority(self, quotation_ecn: ECN):
         sop_date = quotation_ecn.project.important_dates["SOP"]
-        quotation_date = updated_df[(updated_df["Supplier ID"] == self.evaluating_supplier_id) & (updated_df["ECN"] == quotation_ecn.ecn_id)]["Quotation date"].max()
+        quotation_date = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Quotation date"].max()
         due_time = sop_date - quotation_date
         crisp_due_time = max(due_time.days, 0)
 
@@ -1220,7 +1307,7 @@ class Fuzzy_Model:
         spend_level_medium = fuzzy.interp_membership(self.var_spend, self.spend_medium, crisp_spend)
         spend_level_high = fuzzy.interp_membership(self.var_spend, self.spend_high, crisp_spend)
 
-        if self.new_suppliers:
+        if self.new_supplier:
             crisp_delivery_time = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)]["Lead time"].max()
         else:
             crisp_punctuality = len(self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True) & (self.df["OTD"] == True)]) / len(self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True)])
@@ -1236,7 +1323,7 @@ class Fuzzy_Model:
         delivery_time_level_high = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_high, crisp_delivery_time)
 
         # Rule application
-        if self.new_suppliers:
+        if self.new_supplier:
             rule_1 = delivery_time_level_high # Wait
 
             rule_2 = min(due_time_level_low, max(delivery_time_level_low, delivery_time_level_medium), spend_level_high) # Wait
@@ -1308,14 +1395,14 @@ class Fuzzy_Model:
 
         stats = {
             "Supplier ID": self.evaluating_supplier_id,
-            "New supplier": self.new_suppliers,
+            "New supplier": self.new_supplier,
             "Score": supplier_score,
             "Wait": supplier_activation_wait.max(),
             "Implement": supplier_activation_implement.max(),
             "Action": action
         }
 
-        if self.new_suppliers:
+        if self.new_supplier:
             rule_number = 1
             for rule in [rule_1, rule_2, rule_3, rule_4, rule_5, rule_6]:
                 stats[f"Rule {rule_number}"] = rule
@@ -1325,6 +1412,115 @@ class Fuzzy_Model:
         else:
             rule_number = 1
             for rule in [rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_7, rule_8, rule_9, rule_10, rule_11, rule_12, rule_13, rule_14, rule_15, rule_16, rule_17, rule_18]:
+                stats[f"Rule {rule_number}"] = rule
+                rule_number += 1
+
+        return stats
+
+    def _evaluate_supplier_spend_priority(self):
+        crisp_price = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id)]["FY Spend"].sum()
+
+        if self.new_supplier:
+            crisp_delivery_time = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id)]["Lead time"].mean()
+
+        else:
+            crisp_punctuality = len(self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True) & (self.df["OTD"] == True)]) / len(self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True)])
+            crisp_delivery_time = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True)]["Delivery time"].mean()
+
+            punctuality_level_low = fuzzy.interp_membership(self.var_punctuality, self.punctuality_low, crisp_punctuality)
+            punctuality_level_medium = fuzzy.interp_membership(self.var_punctuality, self.punctuality_medium, crisp_punctuality)
+            punctuality_level_high = fuzzy.interp_membership(self.var_punctuality, self.punctuality_high, crisp_punctuality)
+
+        # Assign membership degree
+        price_level_low = fuzzy.interp_membership(self.var_spend, self.spend_low, crisp_price)
+        price_level_medium = fuzzy.interp_membership(self.var_spend, self.spend_medium, crisp_price)
+        price_level_high = fuzzy.interp_membership(self.var_spend, self.spend_high, crisp_price)
+
+        delivery_time_level_low = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_low, crisp_delivery_time)
+        delivery_time_level_medium = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_medium, crisp_delivery_time)
+        delivery_time_level_high = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_high, crisp_delivery_time)
+
+        # Rule application
+        # Example code uses np.fmax for OR operator. I will use np.fmin for AND.
+        if self.new_supplier:
+            rule_1 = min(max(price_level_low, price_level_medium), delivery_time_level_low)  # High
+
+            rule_2 = min(max(price_level_low, price_level_medium), delivery_time_level_medium)  # Regular
+
+            rule_3 = min(max(price_level_low, price_level_medium), delivery_time_level_high)  # Low
+
+            rule_4 = price_level_high  # Low
+
+            low_strength = max(rule_3, rule_4)
+            medium_strength = rule_2
+            high_strength = rule_1
+        else:
+            rule_1 = min(delivery_time_level_low, max(price_level_low, price_level_medium), punctuality_level_low)  # Regular
+
+            rule_2 = min(delivery_time_level_low, max(price_level_low, price_level_medium), max(punctuality_level_medium, punctuality_level_high))  # High
+
+            rule_3 = min(delivery_time_level_low, price_level_high, punctuality_level_low)  # Low
+
+            rule_4 = min(delivery_time_level_low, price_level_high, max(punctuality_level_medium, punctuality_level_high))  # Regular
+
+            rule_5 = min(delivery_time_level_medium, price_level_low, punctuality_level_low)  # Regular
+
+            rule_6 = min(max(delivery_time_level_medium, delivery_time_level_high), max(price_level_low, price_level_medium), punctuality_level_medium)  # Regular
+
+            rule_7 = min(max(delivery_time_level_medium, delivery_time_level_high), max(price_level_low, price_level_medium), punctuality_level_high)  # High
+
+            rule_8 = min(delivery_time_level_medium, max(price_level_medium, price_level_high), punctuality_level_low)  # Low
+
+            rule_9 = min(max(delivery_time_level_medium, delivery_time_level_high), price_level_high, punctuality_level_medium)  # Low
+
+            rule_10 = min(max(delivery_time_level_medium, delivery_time_level_high), price_level_high, punctuality_level_high)  # Medium
+
+            rule_11 = min(delivery_time_level_high, punctuality_level_low)  # Low
+
+            low_strength = max(rule_3, rule_8, rule_9, rule_11)
+            medium_strength = max(rule_1, rule_4, rule_5, rule_6, rule_10)
+            high_strength = max(rule_2, rule_7)
+
+        supplier_activation_low = np.fmin(low_strength, self.supplier_low)
+        supplier_activation_medium = np.fmin(medium_strength, self.supplier_medium)
+        supplier_activation_high = np.fmin(high_strength, self.supplier_high)
+
+        supplier_0 = np.zeros_like(self.var_supplier)
+
+        aggregated = np.fmax.reduce([supplier_activation_low, supplier_activation_medium, supplier_activation_high])
+
+        # Defuzzification
+        supplier_score = fuzzy.defuzz(self.var_supplier, aggregated, "centroid")
+        supplier_activation = fuzzy.interp_membership(self.var_supplier, aggregated, supplier_score)
+
+        match max(supplier_activation_low, supplier_activation_medium, supplier_activation_high):
+            case value if value == supplier_activation_low:
+                linguistic_tag = "Low"
+            case value if value == supplier_activation_medium:
+                linguistic_tag = "Regular"
+            case value if value == supplier_activation_high:
+                linguistic_tag = "High"
+
+        stats = {
+            "Supplier ID": self.evaluating_supplier_id,
+            "New supplier": self.new_supplier,
+            "Score": supplier_score,
+            "Low": supplier_activation_low.max(),
+            "Regular": supplier_activation_medium.max(),
+            "High": supplier_activation_high.max(),
+            "Classification": linguistic_tag
+        }
+
+        if self.new_supplier:
+            rule_number = 1
+            for rule in [rule_1, rule_2, rule_3, rule_4]:
+                stats[f"Rule {rule_number}"] = rule
+                rule_number += 1
+            for i in range(5,12):
+                stats[f"Rule {i}"] = np.nan
+        else:
+            rule_number = 1
+            for rule in [rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_7, rule_8, rule_9, rule_10, rule_11]:
                 stats[f"Rule {rule_number}"] = rule
                 rule_number += 1
 
