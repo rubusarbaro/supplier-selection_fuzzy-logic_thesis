@@ -1206,7 +1206,6 @@ class Fuzzy_Model:
                 self.supplier_medium = fuzzy.trimf(self.var_supplier, [2.5, 5, 7.5])
                 self.supplier_high = fuzzy.trimf(self.var_supplier, [5, 7.5, 10])
 
-                self.stats = self._evaluate_supplier_spend_priority()
             case _:
                 exception("Evaluation priority must be 'time' or 'spend'.")
 
@@ -1417,8 +1416,8 @@ class Fuzzy_Model:
 
         return stats
 
-    def _evaluate_supplier_spend_priority(self):
-        crisp_price = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id)]["FY Spend"].sum()
+    def _evaluate_supplier_spend_priority(self, project: Project):
+        crisp_price = self.df[(self.df["Project"] == project.name) & (self.df["Supplier ID"] == self.evaluating_supplier_id)]["FY Spend"].sum() / 100
 
         if self.new_supplier:
             crisp_delivery_time = self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id)]["Lead time"].mean()
@@ -1493,13 +1492,18 @@ class Fuzzy_Model:
         supplier_score = fuzzy.defuzz(self.var_supplier, aggregated, "centroid")
         supplier_activation = fuzzy.interp_membership(self.var_supplier, aggregated, supplier_score)
 
-        match max(supplier_activation_low, supplier_activation_medium, supplier_activation_high):
-            case value if value == supplier_activation_low:
-                linguistic_tag = "Low"
-            case value if value == supplier_activation_medium:
-                linguistic_tag = "Regular"
-            case value if value == supplier_activation_high:
-                linguistic_tag = "High"
+        max_activation = max(
+            supplier_activation_low.max(),
+            supplier_activation_medium.max(),
+            supplier_activation_high.max()
+        )
+
+        if max_activation == supplier_activation_low.max():
+            linguistic_tag = "Low"
+        elif max_activation == supplier_activation_medium.max():
+            linguistic_tag = "Regular"
+        else:
+            linguistic_tag = "High"
 
         stats = {
             "Supplier ID": self.evaluating_supplier_id,
