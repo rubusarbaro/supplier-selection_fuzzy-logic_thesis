@@ -1416,7 +1416,7 @@ class Fuzzy_Model:
 
         return stats
 
-    def _evaluate_supplier_spend_priority(self, project: Project):
+    def _evaluate_supplier_spend_priority(self, project: Project, gen_chart: bool = False):
         crisp_price = self.df[(self.df["Project"] == project.name) & (self.df["Supplier ID"] == self.evaluating_supplier_id)]["FY Spend"].sum() / 100
 
         if self.new_supplier:
@@ -1527,5 +1527,25 @@ class Fuzzy_Model:
             for rule in [rule_1, rule_2, rule_3, rule_4, rule_5, rule_6, rule_7, rule_8, rule_9, rule_10, rule_11]:
                 stats[f"Rule {rule_number}"] = rule
                 rule_number += 1
+
+        if gen_chart:
+            fig, ax0 = plt.subplots(figsize=(8, 3))
+
+            ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_low, facecolor="r", alpha=0.7)
+            ax0.plot(self.var_supplier, self.supplier_low, "r", linewidth=0.5, linestyle="--", )
+            ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_medium, facecolor="b", alpha=0.7)
+            ax0.plot(self.var_supplier, self.supplier_medium, "b", linewidth=0.5, linestyle="--", )
+            ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_high, facecolor="g", alpha=0.7)
+            ax0.plot(self.var_supplier, self.supplier_high, "g", linewidth=0.5, linestyle="--", )
+            ax0.set_title("Output membership activity")
+
+            for ax in (ax0,):
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+                ax.get_xaxis().tick_bottom()
+                ax.get_yaxis().tick_left()
+            
+            plt.tight_layout()
+            plt.show()
 
         return stats
