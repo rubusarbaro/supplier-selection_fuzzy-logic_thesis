@@ -1537,7 +1537,7 @@ class Fuzzy_Model:
             ax0.plot(self.var_supplier, self.supplier_medium, "b", linewidth=0.5, linestyle="--", )
             ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_high, facecolor="g", alpha=0.7)
             ax0.plot(self.var_supplier, self.supplier_high, "g", linewidth=0.5, linestyle="--", )
-            ax0.set_title("Output membership activity")
+            ax0.set_title(f"Output membership activity (Supplier {self.evaluating_supplier_id})")
 
             for ax in (ax0,):
                 ax.spines["top"].set_visible(False)
