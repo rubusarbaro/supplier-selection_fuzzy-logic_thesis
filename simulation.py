@@ -1202,9 +1202,13 @@ class Fuzzy_Model:
                     }
 
             case "spend":
-                self.supplier_low = fuzzy.trimf(self.var_supplier, [0, 2.5, 5])
+                #self.supplier_low = fuzzy.trimf(self.var_supplier, [0, 2.5, 5])
+                #self.supplier_medium = fuzzy.trimf(self.var_supplier, [2.5, 5, 7.5])
+                #self.supplier_high = fuzzy.trimf(self.var_supplier, [5, 7.5, 10])
+
+                self.supplier_low = fuzzy.trapmf(self.var_supplier, [0,0, 2.5, 5])
                 self.supplier_medium = fuzzy.trimf(self.var_supplier, [2.5, 5, 7.5])
-                self.supplier_high = fuzzy.trimf(self.var_supplier, [5, 7.5, 10])
+                self.supplier_high = fuzzy.trapmf(self.var_supplier, [5, 7.5, 10, 10])
 
             case _:
                 exception("Evaluation priority must be 'time' or 'spend'.")
