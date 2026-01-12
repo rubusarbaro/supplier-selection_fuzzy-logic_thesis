@@ -30,7 +30,7 @@ ECN
 Environment
     Represents the environment were the NPI project takes place and objects interact.
 Fuzzy_Model
-    Provides a fuzzy logic Mamdni's model to evaluate suppliers.
+    Provides a fuzzy logic Mamdani's model to evaluate suppliers.
 Item_Master
     Provides a Pandas' DataFrame with a standardized column set.
 Part_Number
@@ -228,6 +228,8 @@ class ECN:
     display_as_df():
         Returns a DataFrame containing the columns 'Project', 'ECN', 'ECN release', 'Part number', 'Complexity', 'EAU',
         and its values.
+    reset():
+        Returns ECN status to default: "Under review".
     """
     instances = 0
 
