@@ -222,6 +222,8 @@ class ECN:
         List of quotations related to this ECN.
     readiness : dict[str, bool]
         Dictionary containing bools (True or False) indicating id the ECN implementation met the dates of the project.
+    status : str
+        ECN status.
 
     Methods
     -------
@@ -229,7 +231,7 @@ class ECN:
         Returns a DataFrame containing the columns 'Project', 'ECN', 'ECN release', 'Part number', 'Complexity', 'EAU',
         and its values.
     reset():
-        Returns ECN status to default: "Under review".
+        Returns ECN status to default: "Under review" and erases quotation list.
     """
     instances = 0
 
