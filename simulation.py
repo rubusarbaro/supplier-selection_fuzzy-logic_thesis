@@ -925,7 +925,7 @@ class Environment:
 
     def implement_ecn(self, ecn: ECN, awarded_supplier: Supplier, overwrite: bool = False):
         """
-        Implement all the part numbers in a ECN with a chosen supplier.
+        Implement all the part numbers in an ECN with a chosen supplier.
 
         Parameters:
             ecn (ECN): ECN to implement.
