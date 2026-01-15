@@ -555,7 +555,7 @@ class Environment:
     ecns : list[ECN]
         List of created ECNs.
     item_master : DataFrame
-        Master DataFrame of created PartNumber. This record all the information related to a part number and their
+        Master DataFrame of created Part_Number. This record all the information related to a part number and their
         interaction with the suppliers.
     part_kinds : dict[str: dict [str: float | dict[str: float] | list[PartNumber]]]
         There are seven kind of copper tubing; this dictionary contains the mean, standard deviation, price profile
@@ -580,45 +580,45 @@ class Environment:
         self.item_master = Item_Master().df
 
         self.part_kinds = {
-            "A": {
-                "average": float(getenv("AVG_A_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_A_PART_KIND", 1)),
+            "A": {  # Distributor
+                "average": 1.2222222,
+                "stdev": 2.04524,
                 "complexity": {"low": 0.6818181818182, "medium": 0.318181818181818, "high": 0},
                 "parts": []
             },
-            "B": {
-                "average": float(getenv("AVG_B_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_B_PART_KIND", 1)),
+            "B": {  # Liquid tube
+                "average": 0.5,
+                "stdev": 0.857493,
                 "complexity": {"low": 1/3, "medium": 2/3, "high": 0},
                 "parts": []
             },
-            "C": {
-                "average": float(getenv("AVG_C_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_C_PART_KIND", 1)),
+            "C": {  # Equalizer
+                "average": 0.333333,
+                "stdev": 0.766965,
                 "complexity": {"low": 1, "medium": 0, "high": 0},
                 "parts": []
             },
-            "D": {
-                "average": float(getenv("AVG_D_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_D_PART_KIND", 1)),
+            "D": {  # Suction tube
+                "average": 0.611111,
+                "stdev": 0.777544,
                 "complexity": {"low": 0.090909090909090909, "medium": 0.727272727272727, "high": 0.181818181818182},
                 "parts": []
             },
-            "E": {
-                "average": float(getenv("AVG_E_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_E_PART_KIND", 1)),
+            "E": {  # Distributor
+                "average": 0.6666667,
+                "stdev": 1.940285,
                 "complexity": {"low": 0, "medium": 0, "high": 1},
                 "parts": []
             },
-            "F": {
-                "average": float(getenv("AVG_F_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_F_PART_KIND", 1)),
+            "F": {  # Header
+                "average": 0.055556,
+                "stdev": 0.235702,
                 "complexity": {"low": 0, "medium": 0, "high": 1},
                 "parts": []
             },
-            "G": {
-                "average": float(getenv("AVG_G_PART_KIND", 0)),
-                "stdev": float(getenv("STDEV_G_PART_KIND", 1)),
+            "G": {  # Valve assembly
+                "average": 0.44444,
+                "stdev": 0.783823,
                 "complexity": {"low": 0, "medium": 0, "high": 1},
                 "parts": []
             }
@@ -675,7 +675,7 @@ class Environment:
 
     def create_supplier(self, name: str, delivery_profile: str = "regular", quotation_profile: str = "regular", price_profile: str = "regular", punctuality_profile: str = "regular", active: bool = True):
         """
-        Create a new supplier. This method calls Supplier object.
+        Create a new supplier. This method calls Supplier class.
 
         Parameters:
             delivery_profile (str): It determines the delivery speed. Valid options are: 'low', 'regular', and 'high'.
