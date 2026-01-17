@@ -20,6 +20,17 @@ import skfuzzy as fuzzy
 class FuzzyModel:
     """
     Fuzzy logic model to evaluate suppliers on NPI projects.
+
+    Attributes
+    ----------
+    df : DataFrame
+        Pandas' data frame containing the historical data and the information of the part numbers to evaluate.
+    new_supplier : bool
+        Indicates if the supplier to evaluate is new (True) or existing (False).
+    evaluating_supplier_id : str
+        Evaluating supplier ID.
+    evaluation_priority : str
+        It defines the evaluation objective: "time" to prioritize implementation time. "spend" to prioritize cost reduction.
     """
 
     def __init__(
@@ -71,39 +82,39 @@ class FuzzyModel:
         if len(self.spend_df) < 2:
             self.__completely_new_supplier = True
 
-        self.var_due_time = np.arange(0, 721, 1)
-        self.var_delivery_time = np.arange(0, max_delivery_time + 1, 1)
-        self.var_spend = np.arange(0, max_spend + 1, 0.01)
-        self.var_punctuality = np.arange(0, 2, 0.01)
-        self.var_supplier = np.arange(0, 11, 0.01)
+        self.__var_due_time = np.arange(0, 721, 1)
+        self.__var_delivery_time = np.arange(0, max_delivery_time + 1, 1)
+        self.__var_spend = np.arange(0, max_spend + 1, 0.01)
+        self.__var_punctuality = np.arange(0, 2, 0.01)
+        self.__var_supplier = np.arange(0, 11, 0.01)
 
-        self.due_time_low = fuzzy.trapmf(self.var_due_time, [0, 0, 30, 60])
-        self.due_time_medium = fuzzy.trimf(self.var_due_time, [30, 60, 90])
-        self.due_time_high = fuzzy.trapmf(self.var_due_time, [60, 90, 720, 720])
+        self.__due_time_low = fuzzy.trapmf(self.__var_due_time, [0, 0, 30, 60])
+        self.__due_time_medium = fuzzy.trimf(self.__var_due_time, [30, 60, 90])
+        self.__due_time_high = fuzzy.trapmf(self.__var_due_time, [60, 90, 720, 720])
 
-        self.delivery_time_low = fuzzy.trapmf(self.var_delivery_time,
-                                              [0, 0, avg_delivery_time - std_delivery_time, avg_delivery_time])
-        self.delivery_time_medium = fuzzy.trimf(self.var_delivery_time,
-                                                [avg_delivery_time - std_delivery_time, avg_delivery_time,
+        self.__delivery_time_low = fuzzy.trapmf(self.__var_delivery_time,
+                                                [0, 0, avg_delivery_time - std_delivery_time, avg_delivery_time])
+        self.__delivery_time_medium = fuzzy.trimf(self.__var_delivery_time,
+                                                  [avg_delivery_time - std_delivery_time, avg_delivery_time,
                                                  avg_delivery_time + std_delivery_time])
-        self.delivery_time_high = fuzzy.trapmf(self.var_delivery_time,
-                                               [avg_delivery_time, avg_delivery_time + std_delivery_time,
+        self.__delivery_time_high = fuzzy.trapmf(self.__var_delivery_time,
+                                                 [avg_delivery_time, avg_delivery_time + std_delivery_time,
                                                 max_delivery_time, max_delivery_time])
 
         if not new_supplier:
-            self.punctuality_low = fuzzy.trapmf(self.var_punctuality, [0, 0, 0.25, 0.5])
-            self.punctuality_medium = fuzzy.trimf(self.var_punctuality, [0.25, 0.5, 0.75])
-            self.punctuality_high = fuzzy.trapmf(self.var_punctuality, [0.5, 0.75, 1, 1])
+            self.__punctuality_low = fuzzy.trapmf(self.__var_punctuality, [0, 0, 0.25, 0.5])
+            self.__punctuality_medium = fuzzy.trimf(self.__var_punctuality, [0.25, 0.5, 0.75])
+            self.__punctuality_high = fuzzy.trapmf(self.__var_punctuality, [0.5, 0.75, 1, 1])
 
-        self.spend_low = fuzzy.trapmf(self.var_spend, [0, min_spend, max(min_spend, avg_spend - std_spend),
-                                                       max(avg_spend - std_spend, avg_spend)])
-        self.spend_medium = fuzzy.trimf(self.var_spend, [avg_spend - std_spend, avg_spend, avg_spend + std_spend])
-        self.spend_high = fuzzy.trapmf(self.var_spend, [avg_spend, avg_spend + std_spend, max_spend, max_spend])
+        self.__spend_low = fuzzy.trapmf(self.__var_spend, [0, min_spend, max(min_spend, avg_spend - std_spend),
+                                                           max(avg_spend - std_spend, avg_spend)])
+        self.__spend_medium = fuzzy.trimf(self.__var_spend, [avg_spend - std_spend, avg_spend, avg_spend + std_spend])
+        self.__spend_high = fuzzy.trapmf(self.__var_spend, [avg_spend, avg_spend + std_spend, max_spend, max_spend])
 
         match evaluation_priority:
             case "time":
-                self.supplier_wait = fuzzy.trapmf(self.var_supplier, [0, 0, 5, 7.5])
-                self.supplier_implement = fuzzy.trapmf(self.var_supplier, [2.5, 5, 10, 10])
+                self.__supplier_wait = fuzzy.trapmf(self.__var_supplier, [0, 0, 5, 7.5])
+                self.__supplier_implement = fuzzy.trapmf(self.__var_supplier, [2.5, 5, 10, 10])
 
                 if not self.__completely_new_supplier:
                     self.stats = self._evaluate_supplier_time_priority(quotation_ecn)
@@ -117,13 +128,13 @@ class FuzzyModel:
                     }
 
             case "spend":
-                # self.supplier_low = fuzzy.trimf(self.var_supplier, [0, 2.5, 5])
-                # self.supplier_medium = fuzzy.trimf(self.var_supplier, [2.5, 5, 7.5])
-                # self.supplier_high = fuzzy.trimf(self.var_supplier, [5, 7.5, 10])
+                # self.__supplier_low = fuzzy.trimf(self.__var_supplier, [0, 2.5, 5])
+                # self.__supplier_medium = fuzzy.trimf(self.__var_supplier, [2.5, 5, 7.5])
+                # self.__supplier_high = fuzzy.trimf(self.__var_supplier, [5, 7.5, 10])
 
-                self.supplier_low = fuzzy.trapmf(self.var_supplier, [0, 0, 2.5, 5])
-                self.supplier_medium = fuzzy.trimf(self.var_supplier, [2.5, 5, 7.5])
-                self.supplier_high = fuzzy.trapmf(self.var_supplier, [5, 7.5, 10, 10])
+                self.__supplier_low = fuzzy.trapmf(self.__var_supplier, [0, 0, 2.5, 5])
+                self.__supplier_medium = fuzzy.trimf(self.__var_supplier, [2.5, 5, 7.5])
+                self.__supplier_high = fuzzy.trapmf(self.__var_supplier, [5, 7.5, 10, 10])
 
             case _:
                 exception("Evaluation priority must be 'time' or 'spend'.")
@@ -135,32 +146,32 @@ class FuzzyModel:
         if not self.new_supplier or self.evaluation_priority == "spend":
             fig, [ax0, ax1, ax2, ax3, ax4] = plt.subplots(nrows=5, figsize=(8, 9))
 
-            ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
-            ax0.plot(self.var_due_time, self.due_time_medium, "b", linewidth=1.5, label="Near")
-            ax0.plot(self.var_due_time, self.due_time_high, "g", linewidth=1.5, label="Far")
+            ax0.plot(self.__var_due_time, self.__due_time_low, "r", linewidth=1.5, label="Close")
+            ax0.plot(self.__var_due_time, self.__due_time_medium, "b", linewidth=1.5, label="Near")
+            ax0.plot(self.__var_due_time, self.__due_time_high, "g", linewidth=1.5, label="Far")
             ax0.set_title("Due time")
             ax0.legend()
 
-            ax1.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
-            ax1.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
-            ax1.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
+            ax1.plot(self.__var_delivery_time, self.__delivery_time_low, "g", linewidth=1.5, label="Good")
+            ax1.plot(self.__var_delivery_time, self.__delivery_time_medium, "b", linewidth=1.5, label="Regular")
+            ax1.plot(self.__var_delivery_time, self.__delivery_time_high, "r", linewidth=1.5, label="Bad")
             ax1.set_title("Delivery time")
             ax1.legend()
 
-            ax2.plot(self.var_spend, self.spend_low, "g", linewidth=1.5, label="Low")
-            ax2.plot(self.var_spend, self.spend_medium, "b", linewidth=1.5, label="Regular")
-            ax2.plot(self.var_spend, self.spend_high, "r", linewidth=1.5, label="High")
+            ax2.plot(self.__var_spend, self.__spend_low, "g", linewidth=1.5, label="Low")
+            ax2.plot(self.__var_spend, self.__spend_medium, "b", linewidth=1.5, label="Regular")
+            ax2.plot(self.__var_spend, self.__spend_high, "r", linewidth=1.5, label="High")
             ax2.set_title("FY Spend")
             ax2.legend()
 
-            ax3.plot(self.var_punctuality, self.punctuality_low, "r", linewidth=1.5, label="Bad")
-            ax3.plot(self.var_punctuality, self.punctuality_medium, "b", linewidth=1.5, label="Regular")
-            ax3.plot(self.var_punctuality, self.punctuality_high, "g", linewidth=1.5, label="Good")
+            ax3.plot(self.__var_punctuality, self.__punctuality_low, "r", linewidth=1.5, label="Bad")
+            ax3.plot(self.__var_punctuality, self.__punctuality_medium, "b", linewidth=1.5, label="Regular")
+            ax3.plot(self.__var_punctuality, self.__punctuality_high, "g", linewidth=1.5, label="Good")
             ax3.set_title("Punctuality")
             ax3.legend()
 
-            ax4.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
-            ax4.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
+            ax4.plot(self.__var_supplier, self.__supplier_wait, "r", linewidth=1.5, label="Wait")
+            ax4.plot(self.__var_supplier, self.__supplier_implement, "g", linewidth=1.5, label="Implement")
             ax4.set_title("Supplier")
             ax4.legend()
 
@@ -176,26 +187,26 @@ class FuzzyModel:
         else:
             fig, [ax0, ax1, ax2, ax3] = plt.subplots(nrows=4, figsize=(8, 9))
 
-            ax0.plot(self.var_due_time, self.due_time_low, "r", linewidth=1.5, label="Close")
-            ax0.plot(self.var_due_time, self.due_time_medium, "b", linewidth=1.5, label="Near")
-            ax0.plot(self.var_due_time, self.due_time_high, "g", linewidth=1.5, label="Far")
+            ax0.plot(self.__var_due_time, self.__due_time_low, "r", linewidth=1.5, label="Close")
+            ax0.plot(self.__var_due_time, self.__due_time_medium, "b", linewidth=1.5, label="Near")
+            ax0.plot(self.__var_due_time, self.__due_time_high, "g", linewidth=1.5, label="Far")
             ax0.set_title("Due time")
             ax0.legend()
 
-            ax1.plot(self.var_delivery_time, self.delivery_time_low, "g", linewidth=1.5, label="Good")
-            ax1.plot(self.var_delivery_time, self.delivery_time_medium, "b", linewidth=1.5, label="Regular")
-            ax1.plot(self.var_delivery_time, self.delivery_time_high, "r", linewidth=1.5, label="Bad")
+            ax1.plot(self.__var_delivery_time, self.__delivery_time_low, "g", linewidth=1.5, label="Good")
+            ax1.plot(self.__var_delivery_time, self.__delivery_time_medium, "b", linewidth=1.5, label="Regular")
+            ax1.plot(self.__var_delivery_time, self.__delivery_time_high, "r", linewidth=1.5, label="Bad")
             ax1.set_title("Delivery time")
             ax1.legend()
 
-            ax2.plot(self.var_spend, self.spend_low, "g", linewidth=1.5, label="Low")
-            ax2.plot(self.var_spend, self.spend_medium, "b", linewidth=1.5, label="Regular")
-            ax2.plot(self.var_spend, self.spend_high, "r", linewidth=1.5, label="High")
+            ax2.plot(self.__var_spend, self.__spend_low, "g", linewidth=1.5, label="Low")
+            ax2.plot(self.__var_spend, self.__spend_medium, "b", linewidth=1.5, label="Regular")
+            ax2.plot(self.__var_spend, self.__spend_high, "r", linewidth=1.5, label="High")
             ax2.set_title("FY Spend")
             ax2.legend()
 
-            ax3.plot(self.var_supplier, self.supplier_wait, "r", linewidth=1.5, label="Wait")
-            ax3.plot(self.var_supplier, self.supplier_implement, "g", linewidth=1.5, label="Implement")
+            ax3.plot(self.__var_supplier, self.__supplier_wait, "r", linewidth=1.5, label="Wait")
+            ax3.plot(self.__var_supplier, self.__supplier_implement, "g", linewidth=1.5, label="Implement")
             ax3.set_title("Supplier")
             ax3.legend()
 
@@ -216,16 +227,16 @@ class FuzzyModel:
         due_time = sop_date - quotation_date
         crisp_due_time = max(due_time.days, 0)
 
-        due_time_level_low = fuzzy.interp_membership(self.var_due_time, self.due_time_low, crisp_due_time)
-        due_time_level_medium = fuzzy.interp_membership(self.var_due_time, self.due_time_medium, crisp_due_time)
-        due_time_level_high = fuzzy.interp_membership(self.var_due_time, self.due_time_high, crisp_due_time)
+        due_time_level_low = fuzzy.interp_membership(self.__var_due_time, self.__due_time_low, crisp_due_time)
+        due_time_level_medium = fuzzy.interp_membership(self.__var_due_time, self.__due_time_medium, crisp_due_time)
+        due_time_level_high = fuzzy.interp_membership(self.__var_due_time, self.__due_time_high, crisp_due_time)
 
         # Assign membership degree
         crisp_spend = (self.spend_df.loc[self.evaluating_supplier_id]) / 100
 
-        spend_level_low = fuzzy.interp_membership(self.var_spend, self.spend_low, crisp_spend)
-        spend_level_medium = fuzzy.interp_membership(self.var_spend, self.spend_medium, crisp_spend)
-        spend_level_high = fuzzy.interp_membership(self.var_spend, self.spend_high, crisp_spend)
+        spend_level_low = fuzzy.interp_membership(self.__var_spend, self.__spend_low, crisp_spend)
+        spend_level_medium = fuzzy.interp_membership(self.__var_spend, self.__spend_medium, crisp_spend)
+        spend_level_high = fuzzy.interp_membership(self.__var_spend, self.__spend_high, crisp_spend)
 
         if self.new_supplier:
             crisp_delivery_time = \
@@ -236,22 +247,22 @@ class FuzzyModel:
                         self.df["Awarded"] == True) & (self.df["OTD"] == True)]) / len(
                 self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True)])
 
-            punctuality_level_low = fuzzy.interp_membership(self.var_punctuality, self.punctuality_low,
+            punctuality_level_low = fuzzy.interp_membership(self.__var_punctuality, self.__punctuality_low,
                                                             crisp_punctuality)
-            punctuality_level_medium = fuzzy.interp_membership(self.var_punctuality, self.punctuality_medium,
+            punctuality_level_medium = fuzzy.interp_membership(self.__var_punctuality, self.__punctuality_medium,
                                                                crisp_punctuality)
-            punctuality_level_high = fuzzy.interp_membership(self.var_punctuality, self.punctuality_high,
+            punctuality_level_high = fuzzy.interp_membership(self.__var_punctuality, self.__punctuality_high,
                                                              crisp_punctuality)
 
             crisp_delivery_time = \
             self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["ECN"] == quotation_ecn.ecn_id)][
                 "Lead time"].max()
 
-        delivery_time_level_low = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_low,
+        delivery_time_level_low = fuzzy.interp_membership(self.__var_delivery_time, self.__delivery_time_low,
                                                           crisp_delivery_time)
-        delivery_time_level_medium = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_medium,
+        delivery_time_level_medium = fuzzy.interp_membership(self.__var_delivery_time, self.__delivery_time_medium,
                                                              crisp_delivery_time)
-        delivery_time_level_high = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_high,
+        delivery_time_level_high = fuzzy.interp_membership(self.__var_delivery_time, self.__delivery_time_high,
                                                            crisp_delivery_time)
 
         # Rule application
@@ -332,14 +343,14 @@ class FuzzyModel:
             wait_strength = max(rule_1, rule_2, rule_3, rule_7, rule_9, rule_10, rule_13, rule_14, rule_15, rule_16)
             implement_strength = max(rule_4, rule_5, rule_6, rule_8, rule_11, rule_12, rule_17, rule_18)
 
-        supplier_activation_wait = np.fmin(wait_strength, self.supplier_wait)
-        supplier_activation_implement = np.fmin(implement_strength, self.supplier_implement)
+        supplier_activation_wait = np.fmin(wait_strength, self.__supplier_wait)
+        supplier_activation_implement = np.fmin(implement_strength, self.__supplier_implement)
 
         aggregated = np.fmax.reduce([supplier_activation_wait, supplier_activation_implement])
 
         # Defuzzification
-        supplier_score = fuzzy.defuzz(self.var_supplier, aggregated, "centroid")
-        supplier_activation = fuzzy.interp_membership(self.var_supplier, aggregated, supplier_score)
+        supplier_score = fuzzy.defuzz(self.__var_supplier, aggregated, "centroid")
+        supplier_activation = fuzzy.interp_membership(self.__var_supplier, aggregated, supplier_score)
 
         if supplier_activation_implement.max() > supplier_activation_wait.max():
             action = "Implement"
@@ -387,23 +398,23 @@ class FuzzyModel:
             self.df[(self.df["Supplier ID"] == self.evaluating_supplier_id) & (self.df["Awarded"] == True)][
                 "Delivery time"].mean()
 
-            punctuality_level_low = fuzzy.interp_membership(self.var_punctuality, self.punctuality_low,
+            punctuality_level_low = fuzzy.interp_membership(self.__var_punctuality, self.__punctuality_low,
                                                             crisp_punctuality)
-            punctuality_level_medium = fuzzy.interp_membership(self.var_punctuality, self.punctuality_medium,
+            punctuality_level_medium = fuzzy.interp_membership(self.__var_punctuality, self.__punctuality_medium,
                                                                crisp_punctuality)
-            punctuality_level_high = fuzzy.interp_membership(self.var_punctuality, self.punctuality_high,
+            punctuality_level_high = fuzzy.interp_membership(self.__var_punctuality, self.__punctuality_high,
                                                              crisp_punctuality)
 
         # Assign membership degree
-        price_level_low = fuzzy.interp_membership(self.var_spend, self.spend_low, crisp_price)
-        price_level_medium = fuzzy.interp_membership(self.var_spend, self.spend_medium, crisp_price)
-        price_level_high = fuzzy.interp_membership(self.var_spend, self.spend_high, crisp_price)
+        price_level_low = fuzzy.interp_membership(self.__var_spend, self.__spend_low, crisp_price)
+        price_level_medium = fuzzy.interp_membership(self.__var_spend, self.__spend_medium, crisp_price)
+        price_level_high = fuzzy.interp_membership(self.__var_spend, self.__spend_high, crisp_price)
 
-        delivery_time_level_low = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_low,
+        delivery_time_level_low = fuzzy.interp_membership(self.__var_delivery_time, self.__delivery_time_low,
                                                           crisp_delivery_time)
-        delivery_time_level_medium = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_medium,
+        delivery_time_level_medium = fuzzy.interp_membership(self.__var_delivery_time, self.__delivery_time_medium,
                                                              crisp_delivery_time)
-        delivery_time_level_high = fuzzy.interp_membership(self.var_delivery_time, self.delivery_time_high,
+        delivery_time_level_high = fuzzy.interp_membership(self.__var_delivery_time, self.__delivery_time_high,
                                                            crisp_delivery_time)
 
         # Rule application
@@ -455,17 +466,17 @@ class FuzzyModel:
             medium_strength = max(rule_1, rule_4, rule_5, rule_6, rule_10)
             high_strength = max(rule_2, rule_7)
 
-        supplier_activation_low = np.fmin(low_strength, self.supplier_low)
-        supplier_activation_medium = np.fmin(medium_strength, self.supplier_medium)
-        supplier_activation_high = np.fmin(high_strength, self.supplier_high)
+        supplier_activation_low = np.fmin(low_strength, self.__supplier_low)
+        supplier_activation_medium = np.fmin(medium_strength, self.__supplier_medium)
+        supplier_activation_high = np.fmin(high_strength, self.__supplier_high)
 
-        supplier_0 = np.zeros_like(self.var_supplier)
+        supplier_0 = np.zeros_like(self.__var_supplier)
 
         aggregated = np.fmax.reduce([supplier_activation_low, supplier_activation_medium, supplier_activation_high])
 
         # Defuzzification
-        supplier_score = fuzzy.defuzz(self.var_supplier, aggregated, "centroid")
-        supplier_activation = fuzzy.interp_membership(self.var_supplier, aggregated, supplier_score)
+        supplier_score = fuzzy.defuzz(self.__var_supplier, aggregated, "centroid")
+        supplier_activation = fuzzy.interp_membership(self.__var_supplier, aggregated, supplier_score)
 
         max_activation = max(
             supplier_activation_low.max(),
@@ -506,12 +517,12 @@ class FuzzyModel:
         if gen_chart:
             fig, ax0 = plt.subplots(figsize=(8, 3))
 
-            ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_low, facecolor="r", alpha=0.7)
-            ax0.plot(self.var_supplier, self.supplier_low, "r", linewidth=0.5, linestyle="--", )
-            ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_medium, facecolor="b", alpha=0.7)
-            ax0.plot(self.var_supplier, self.supplier_medium, "b", linewidth=0.5, linestyle="--", )
-            ax0.fill_between(self.var_supplier, supplier_0, supplier_activation_high, facecolor="g", alpha=0.7)
-            ax0.plot(self.var_supplier, self.supplier_high, "g", linewidth=0.5, linestyle="--", )
+            ax0.fill_between(self.__var_supplier, supplier_0, supplier_activation_low, facecolor="r", alpha=0.7)
+            ax0.plot(self.__var_supplier, self.__supplier_low, "r", linewidth=0.5, linestyle="--", )
+            ax0.fill_between(self.__var_supplier, supplier_0, supplier_activation_medium, facecolor="b", alpha=0.7)
+            ax0.plot(self.__var_supplier, self.__supplier_medium, "b", linewidth=0.5, linestyle="--", )
+            ax0.fill_between(self.__var_supplier, supplier_0, supplier_activation_high, facecolor="g", alpha=0.7)
+            ax0.plot(self.__var_supplier, self.__supplier_high, "g", linewidth=0.5, linestyle="--", )
             ax0.set_title(f"Output membership activity (Supplier {self.evaluating_supplier_id})")
 
             for ax in (ax0,):
